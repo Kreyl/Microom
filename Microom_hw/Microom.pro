@@ -1,4 +1,4 @@
-update=18.08.2015 23:09:01
+update=19.08.2015 9:22:55
 version=1
 last_client=kicad
 [pcbnew]
@@ -41,3 +41,4 @@ LibName9=Sensors
 LibName10=Antennas_kl
 LibName11=Connectors_kl
 LibName12=ESDProtection
+LibName13=Audio_kl
