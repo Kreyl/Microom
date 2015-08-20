@@ -1,4 +1,4 @@
-update=19.08.2015 9:22:55
+update=20.08.2015 13:15:41
 version=1
 last_client=kicad
 [pcbnew]
@@ -42,3 +42,13 @@ LibName10=Antennas_kl
 LibName11=Connectors_kl
 LibName12=ESDProtection
 LibName13=Audio_kl
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
