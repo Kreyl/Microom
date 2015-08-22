@@ -413,11 +413,6 @@ F 3 "" H 3950 5350 60  0001 C CNN
 	1    0    0    -1  
 $EndComp
 NoConn ~ 2800 3650
-NoConn ~ 2800 1700
-NoConn ~ 2800 2300
-NoConn ~ 2800 2400
-NoConn ~ 2800 2500
-NoConn ~ 2800 2600
 NoConn ~ 2800 3200
 NoConn ~ 5900 4850
 NoConn ~ 5900 4750
@@ -2097,42 +2092,32 @@ Wire Wire Line
 	10900 1850 11050 1850
 Wire Wire Line
 	11050 1950 10900 1950
-Text Label 6250 3300 2    60   ~ 0
+Text Label 2750 1700 2    60   ~ 0
 LED1
-Text Label 6250 3400 2    60   ~ 0
+Text Label 2700 2600 2    60   ~ 0
 LED2
-Text Label 6250 3500 2    60   ~ 0
+Text Label 6250 3300 2    60   ~ 0
 LED3
 Text Label 6250 3600 2    60   ~ 0
 LED4
-Text Label 6250 3700 2    60   ~ 0
+Text Label 2750 2300 2    60   ~ 0
 LED5
-Text Label 6250 3900 2    60   ~ 0
+Text Label 6250 3200 2    60   ~ 0
 LED6
-Text Label 6250 4000 2    60   ~ 0
+Text Label 2750 2400 2    60   ~ 0
 LED7
-Text Label 6250 4600 2    60   ~ 0
+Text Label 6250 2500 2    60   ~ 0
 LED8
 Wire Wire Line
 	6250 3300 5900 3300
 Wire Wire Line
-	5900 3400 6250 3400
-Wire Wire Line
-	6250 3500 5900 3500
-Wire Wire Line
 	6250 3600 5900 3600
 Wire Wire Line
-	5900 3700 6250 3700
+	6250 3200 5900 3200
 Wire Wire Line
-	6250 3900 5900 3900
-Wire Wire Line
-	5900 4000 6250 4000
-Wire Wire Line
-	6250 4600 5900 4600
-Text Label 6350 3200 2    60   ~ 0
+	6250 2500 5900 2500
+Text Label 2700 2500 2    60   ~ 0
 LED_AUX
-Wire Wire Line
-	6350 3200 5900 3200
 Wire Wire Line
 	11400 1900 11750 1900
 Wire Wire Line
@@ -3137,7 +3122,6 @@ F 3 "" H 6200 4100 60  0000 C CNN
 $EndComp
 Text Label 5950 4100 0    60   ~ 0
 MCO2
-NoConn ~ 5900 2500
 Wire Notes Line
 	8700 7300 8700 11200
 NoConn ~ 8200 10300
@@ -3626,25 +3610,18 @@ GPIO22
 Wire Wire Line
 	10900 5400 11550 5400
 Connection ~ 11400 5400
-Text Label 6000 1800 0    60   ~ 0
+Text Label 6000 4600 0    60   ~ 0
 CS2
 Wire Wire Line
-	6000 1800 5900 1800
+	6000 4600 5900 4600
 NoConn ~ 10900 4550
 NoConn ~ 10900 4650
 NoConn ~ 10900 4750
 NoConn ~ 10900 4850
-Text Label 6000 1600 0    60   ~ 0
+Text Label 2400 1800 0    60   ~ 0
 GPIO32
-Text Label 6000 1500 0    60   ~ 0
+Text Label 2400 1900 0    60   ~ 0
 GPIO22
-Wire Wire Line
-	5900 1500 6000 1500
-Wire Wire Line
-	6000 1600 5900 1600
-NoConn ~ 2800 1800
-NoConn ~ 2800 1900
-NoConn ~ 2800 2000
 Wire Wire Line
 	9000 4550 9300 4550
 Wire Wire Line
@@ -3729,4 +3706,27 @@ F 3 "" H 6850 9700 60  0000 C CNN
 $EndComp
 Wire Wire Line
 	6850 8150 6850 9700
+Wire Wire Line
+	2700 2600 2800 2600
+Wire Wire Line
+	2700 2500 2800 2500
+Wire Wire Line
+	2750 1700 2800 1700
+Wire Wire Line
+	2400 1800 2800 1800
+Wire Wire Line
+	2800 1900 2400 1900
+Wire Wire Line
+	2750 2400 2800 2400
+Wire Wire Line
+	2750 2300 2800 2300
+NoConn ~ 5900 1800
+NoConn ~ 5900 1500
+NoConn ~ 5900 1600
+NoConn ~ 2800 2000
+NoConn ~ 5900 3400
+NoConn ~ 5900 3500
+NoConn ~ 5900 3700
+NoConn ~ 5900 3900
+NoConn ~ 5900 4000
 $EndSCHEMATC
