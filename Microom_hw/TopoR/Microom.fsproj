@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xsi:noNamespaceSchemaLocation="Project.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<Version current="1"/>
+	<Format>Project</Format>
+	<Header>
+		<Program name="TopoR" version="6.1"/>
+		<GUID>{BAB1C25A-C73E-423E-9FC5-B1FD7792762E}</GUID>
+		<Annotation>Project file</Annotation>
+	</Header>
+	<Document>
+		<LocalLibrary />
+		<Pcb>
+			<File path=".\Microom.fsx" Folder="-1" isopened="1"/>
+		</Pcb>
+		<Import>
+			<Specctra>
+			<Path name="D:\Nute\HandyDevices\Microom\Microom_hw\Microom.dsn"/>
+			</Specctra>
+		</Import>
+		<Export path="D:\Nute\HandyDevices\Microom\Microom_hw\"/>
+		<ARouteSessions>
+		</ARouteSessions>
+	</Document>
+</Project>
