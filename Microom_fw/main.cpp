@@ -11,7 +11,7 @@
 /* TODO
  * - Check prefetcher
  * - Check Flash Latency
- *
+ * - Check voltage regulator (PWR->CR VOS)
  */
 
 App_t App;
@@ -31,7 +31,6 @@ int main(void) {
     // Init OS
     halInit();
     chSysInit();
-
     // ==== Init hardware ====
     Uart.Init(115200);
     Uart.Printf("\r%S_%S", APP_NAME, APP_VERSION);
@@ -57,7 +56,7 @@ void App_t::ITask() {
 //            y0 = PCurrentFilter->AddXAndCalculate(y0);
 
         if(EvtMsk & EVTMSK_USB_READY) {
-            Uart.Printf("\rUsbReady");
+//            Uart.Printf("\rUsbReady");
         }
 
 //        if(EvtMsk & EVTMSK_USB_DATA_OUT) {
@@ -68,7 +67,7 @@ void App_t::ITask() {
 }
 
 #if 1 // ======================= Command processing ============================
-void App_t::OnUartCmd(Uart_t *PUart) {
+//void App_t::OnUartCmd(Uart_t *PUart) {
 //    UsbCmd_t *PCmd = UsbUart.PCmd;
 //    __attribute__((unused)) int32_t dw32 = 0;  // May be unused in some configurations
 //    Uart.Printf("\r%S", PCmd->Name);
@@ -100,7 +99,7 @@ void App_t::OnUartCmd(Uart_t *PUart) {
 #endif
 
 //    else UsbUart.Ack(CMD_UNKNOWN);  // reply only #-started stuff
-}
+//}
 #endif
 
 #if 1 // ============================ LEDs =====================================

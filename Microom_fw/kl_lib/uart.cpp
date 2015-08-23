@@ -66,7 +66,7 @@ void Uart_t::ISendViaDMA() {
 
 #if 1 // ==== Print Now ====
 static inline void FPutCharNow(char c) {
-#if defined STM32L1XX_MD || defined STM32F2XX
+#if defined STM32L1XX_MD || defined STM32F2XX || defined STM32F4XX
     while(!(UART->SR & USART_SR_TXE));
     UART_TX_REG = c;
     while(!(UART->SR & USART_SR_TXE));

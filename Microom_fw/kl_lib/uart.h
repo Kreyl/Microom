@@ -14,7 +14,7 @@
 #include "cmd.h"
 
 // Set to true if RX needed
-#define UART_RX_ENABLED     TRUE
+#define UART_RX_ENABLED     FALSE
 
 // UART
 #define UART                USART1
@@ -68,6 +68,7 @@
                             STM32_DMA_CR_MINC |       /* Memory pointer increase */ \
                             STM32_DMA_CR_DIR_P2M |    /* Direction is peripheral to memory */ \
                             STM32_DMA_CR_CIRC         /* Circular buffer enable */
+
 
 typedef Cmd_t<99> UartCmd_t;
 #endif

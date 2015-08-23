@@ -203,12 +203,13 @@ extern Clk_t Clk;
 extern "C" {
 void __early_init(void);
 }
-#elif defined STM32F40_41xxx
+#elif defined STM32F4xx_MCUCONF
 #include "stm32f4xx.h"
 
 #define CRYSTAL_FREQ_HZ     12000000    // Freq of external crystal, change accordingly
-#define HSI_FREQ_HZ         HSI_VALUE   // Freq of internal generator, not adjustable
+#define HSI_FREQ_HZ         16000000    // Freq of internal generator, not adjustable
 #define LSI_FREQ_HZ         32000       // Freq of low power internal generator, may vary depending on voltage, not adjustable
+#define CLK_STARTUP_TIMEOUT 2007        // tics
 
 enum ClkSrc_t {csHSI, csHSE, csPLL};
 enum AHBDiv_t {
@@ -254,6 +255,7 @@ public:
     void UpdateFreqValues();
     uint8_t SetupFlashLatency(uint8_t AHBClk_MHz, uint16_t Voltage_mV=3300);
     // Systick init: the timer is required for OS
+#if !defined STM32F4xx_MCUCONF
     void InitSysTick() {
         __disable_irq();
         SysTick->LOAD = AHBFreqHz / CH_FREQUENCY - 1;
@@ -261,6 +263,7 @@ public:
         SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk;
         __enable_irq();
     }
+#endif
     // Special frequencies
     void SetFreq12Mhz() {
         if(AHBFreqHz < 12000000) SetupFlashLatency(12); // Rise flash latency now if current freq > required

@@ -19,16 +19,18 @@
 
 class App_t {
 private:
-    Thread *PThread;
+    thread_t *PThread;
 public:
     // Eternal methods
-    void InitThread() { PThread = chThdSelf(); }
+    void InitThread() { PThread = chThdGetSelfX(); }
     void SignalEvt(eventmask_t Evt) {
         chSysLock();
         chEvtSignalI(PThread, Evt);
         chSysUnlock();
     }
-    void SignalEvtI(eventmask_t Evt) { chEvtSignalI(PThread, Evt); }
+    void SignalEvtI(eventmask_t Evt) {
+        chEvtSignalI(PThread, Evt);
+        }
     void OnUartCmd(Uart_t *PUart);
     // Inner use
     void ITask();

@@ -121,7 +121,7 @@ public:
 };
 #endif
 
-#if 1 // ============================ FIR Float ================================
+#if 0 // ============================ FIR Float ================================
 class FirFloat_t : public Filter_t {
 private:
     float x[FIR_MAX_SZ];
@@ -163,7 +163,7 @@ public:
 };
 #endif
 
-#if 1 // ============================ IIR Float ==================================
+#if 0 // ============================ IIR Float ==================================
 class IirFloat_t : public Filter_t {
 private:
     float x[IIR_MAX_SZ];
@@ -227,7 +227,7 @@ public:
 };
 #endif
 
-#if 1 // ============================ All-pass =================================
+#if 0 // ============================ All-pass =================================
 class AllPass_t {
 private:
     float c1;
@@ -245,7 +245,7 @@ public:
 
 #endif
 
-#if 1 // ============================ Notch Float ==============================
+#if 0 // ============================ Notch Float ==============================
 class NotchFloat_t : public Filter_t {
 private:
     AllPass_t AllP0, AllP1;

@@ -124,7 +124,7 @@ void Timer_t::SetUpdateFrequency(uint32_t FreqHz) {
 }
 #endif
 
-#if 1 // ========================== Virtual Timers =============================
+#if VIRTUAL_TIMER_KL // =================== Virtual Timers =====================
 //void chVTRestart(VirtualTimer *vtp, systime_t time, eventmask_t Evt) {
 //    chSysLock();
 ////    Uart.PrintfI("\r Restart t=%u msk=%X Armed=%u", time, Evt, chVTIsArmedI(vtp));

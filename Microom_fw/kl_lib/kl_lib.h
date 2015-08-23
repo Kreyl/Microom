@@ -15,7 +15,7 @@
 #include "clocking.h"
 
 // Lib version
-#define KL_LIB_VERSION      20150816_1523
+#define KL_LIB_VERSION      20150823_1118_v3
 
 #if defined STM32L1XX_MD
 #include "stm32l1xx.h"
@@ -129,7 +129,8 @@ void __attribute__ ((weak)) _init(void)  {}
 }
 #endif
 
-#if 1 // ======================= Virtual Timer =================================
+#if 0 // ======================= Virtual Timer =================================
+#define VIRTUAL_TIMER_KL    TRUE
 // Universal VirtualTimer callback
 void TmrVirtualCallback(void *p);
 
@@ -183,7 +184,7 @@ static inline void chVTStartIfNotStarted(VirtualTimer *vtp, systime_t time, even
 */
 #endif
 
-#if 1 // =========================== Time ======================================
+#if 0 // =========================== Time ======================================
 static inline bool TimeElapsed(systime_t *PSince, uint32_t Delay_ms) {
     chSysLock();
     bool Rslt = (systime_t)(chTimeNow() - *PSince) > MS2ST(Delay_ms);
@@ -519,7 +520,7 @@ public:
         else if ((APinNumber >= 4)  and (APinNumber <= 15)) IIrqChnl = EXTI4_15_IRQn;
 #endif
     }
-    void EnableIrq(const uint32_t Priority) { nvicEnableVector(IIrqChnl, CORTEX_PRIORITY_MASK(Priority)); }
+//    void EnableIrq(const uint32_t Priority) { nvicEnableVector(IIrqChnl, CORTEX_PRIORITY_MASK(Priority)); }
     void DisableIrq() { nvicDisableVector(IIrqChnl); }
     void CleanIrqFlag() { EXTI->PR = (1 << IPinNumber); }
 };

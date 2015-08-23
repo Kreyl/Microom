@@ -5,8 +5,7 @@
  *      Author: kreyl
  */
 
-#include <clocking.h>
-
+#include "clocking.h"
 #include "stm32_rcc.h"
 #include "uart.h"
 
@@ -368,7 +367,7 @@ uint8_t Clk_t::HSEEnable() {
     do {
         if(RCC->CR & RCC_CR_HSERDY) return 0;   // HSE is ready
         StartUpCounter++;
-    } while(StartUpCounter < HSE_STARTUP_TIMEOUT);
+    } while(StartUpCounter < CLK_STARTUP_TIMEOUT);
     return 1; // Timeout
 }
 
@@ -379,7 +378,7 @@ uint8_t Clk_t::HSIEnable() {
     do {
         if(RCC->CR & RCC_CR_HSIRDY) return 0;   // HSE is ready
         StartUpCounter++;
-    } while(StartUpCounter < HSE_STARTUP_TIMEOUT);
+    } while(StartUpCounter < CLK_STARTUP_TIMEOUT);
     return 1; // Timeout
 }
 
@@ -390,7 +389,7 @@ uint8_t Clk_t::PLLEnable() {
     do {
         if(RCC->CR & RCC_CR_PLLRDY) return 0;   // PLL is ready
         StartUpCounter++;
-    } while(StartUpCounter < HSE_STARTUP_TIMEOUT);
+    } while(StartUpCounter < CLK_STARTUP_TIMEOUT);
     return 1; // Timeout
 }
 
@@ -415,7 +414,7 @@ void Clk_t::UpdateFreqValues() {
             Multi_N    = (RCC->PLLCFGR & RCC_PLLCFGR_PLLN) >> 6;
             SysDiv_P   = (((RCC->PLLCFGR & RCC_PLLCFGR_PLLP) >> 16) + 1 ) * 2;
             // Calculate pll freq
-            pllvco = (RCC->PLLCFGR & RCC_PLLCFGR_PLLSRC_HSE)? CRYSTAL_FREQ_HZ : HSI_VALUE;
+            pllvco = (RCC->PLLCFGR & RCC_PLLCFGR_PLLSRC_HSE)? CRYSTAL_FREQ_HZ : HSI_FREQ_HZ;
             pllvco = (pllvco / InputDiv_M) * Multi_N;
             SysFreqHz = pllvco / SysDiv_P;
             break;
@@ -447,7 +446,7 @@ void Clk_t::UpdateFreqValues() {
         Multi_N    = (RCC->PLLCFGR & RCC_PLLCFGR_PLLN) >> 6;
         uint32_t SysDiv_Q = (RCC->PLLCFGR & RCC_PLLCFGR_PLLQ) >> 24;
         // Calculate pll freq
-        pllvco = (RCC->PLLCFGR & RCC_PLLCFGR_PLLSRC_HSE)? CRYSTAL_FREQ_HZ : HSI_VALUE;
+        pllvco = (RCC->PLLCFGR & RCC_PLLCFGR_PLLSRC_HSE)? CRYSTAL_FREQ_HZ : HSI_FREQ_HZ;
         pllvco = (pllvco / InputDiv_M) * Multi_N;
         if(SysDiv_Q >= 2) UsbSdioFreqHz = pllvco / SysDiv_Q;
     }
