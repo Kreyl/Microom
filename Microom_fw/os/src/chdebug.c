@@ -202,9 +202,11 @@ void _dbg_check_unlock_from_isr(void) {
 void _dbg_check_enter_isr(void) {
 
   port_lock_from_isr();
+
   if ((ch.dbg.isr_cnt < (cnt_t)0) || (ch.dbg.lock_cnt != (cnt_t)0)) {
     chSysHalt("SV#8");
   }
+
   ch.dbg.isr_cnt++;
   port_unlock_from_isr();
 }

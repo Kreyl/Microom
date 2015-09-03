@@ -83,7 +83,7 @@ void _unhandled_exception(void) {
 
 #if !defined(__DOXYGEN__)
 extern uint32_t __main_stack_end__;
-void Reset_Handler(void) __attribute__((weak, alias("_unhandled_exception")));
+void Reset_Handler(void);// __attribute__((weak, alias("_unhandled_exception")));
 void NMI_Handler(void) __attribute__((weak, alias("_unhandled_exception")));
 void HardFault_Handler(void) __attribute__((weak, alias("_unhandled_exception")));
 void MemManage_Handler(void) __attribute__((weak, alias("_unhandled_exception")));
@@ -139,7 +139,7 @@ void VectorA8(void) __attribute__((weak, alias("_unhandled_exception")));
 void VectorAC(void) __attribute__((weak, alias("_unhandled_exception")));
 #endif
 #if CORTEX_NUM_VECTORS > 28
-void VectorB0(void) __attribute__((weak, alias("_unhandled_exception")));
+void VectorB0(void);// __attribute__((weak, alias("_unhandled_exception"))); // @KL
 void VectorB4(void) __attribute__((weak, alias("_unhandled_exception")));
 void VectorB8(void) __attribute__((weak, alias("_unhandled_exception")));
 void VectorBC(void) __attribute__((weak, alias("_unhandled_exception")));

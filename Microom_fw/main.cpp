@@ -31,13 +31,23 @@ int main(void) {
     // Init OS
     halInit();
     chSysInit();
+
+    PinSetupOut(GPIOB, 10, omPushPull, pudNone);
+    PinSetupOut(GPIOB, 8, omPushPull, pudNone);
+//    PinSetupAlterFunc(GPIOB, 3, omPushPull, pudNone, AF1);
+
     // ==== Init hardware ====
-    Uart.Init(115200);
-    Uart.Printf("\r%S_%S", APP_NAME, APP_VERSION);
+    Uart.Init(115200, GPIOB, 6);
+    Uart.Printf("\r%S %S", APP_NAME, APP_VERSION);
     Clk.PrintFreqs();
+
+//    PinSet(GPIOB, 8);
+
+
+    //Clk.PrintFreqs();
 //    if(ClkResult != 0) Uart.Printf("\rXTAL failure");
 
-    App.InitThread();
+//    App.InitThread();
 
 //    Usb.Init();
 //    UsbUart.Init();
@@ -51,13 +61,20 @@ int main(void) {
 __attribute__ ((__noreturn__))
 void App_t::ITask() {
     while(true) {
-        uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
+//        GPIOB->BSRRL = (uint16_t)(1<<10);
+        PinSet(GPIOB, 10);
+        chThdSleepMilliseconds(252);
+//        GPIOB->BSRRL = (uint16_t)(1<<10);
+        PinClear(GPIOB, 10);
+        chThdSleepMilliseconds(450);
+
+//        uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
 //            // ==== Filter ====
 //            y0 = PCurrentFilter->AddXAndCalculate(y0);
 
-        if(EvtMsk & EVTMSK_USB_READY) {
+//        if(EvtMsk & EVTMSK_USB_READY) {
 //            Uart.Printf("\rUsbReady");
-        }
+//        }
 
 //        if(EvtMsk & EVTMSK_USB_DATA_OUT) {
 //            LedBlink(54);

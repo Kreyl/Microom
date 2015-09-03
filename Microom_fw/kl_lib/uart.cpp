@@ -11,6 +11,23 @@
 
 Uart_t Uart;
 
+#if UART_USE_DMA
+// Wrapper for TX IRQ
+extern "C" {
+void CmdUartTxIrq(void *p, uint32_t flags) { Uart.IRQDmaTxHandler(); }
+}
+
+// ==== TX DMA IRQ ====
+void Uart_t::IRQDmaTxHandler() {
+    dmaStreamDisable(UART_DMA_TX);    // Registers may be changed only when stream is disabled
+    IFullSlotsCount -= ITransSize;
+    PRead += ITransSize;
+    if(PRead >= (TXBuf + UART_TXBUF_SZ)) PRead = TXBuf; // Circulate pointer
+
+    if(IFullSlotsCount == 0) IDmaIsIdle = true; // Nothing left to send
+    else ISendViaDMA();
+}
+
 extern "C" {
 void PrintfC(const char *format, ...) {
     chSysLock();
@@ -63,10 +80,11 @@ void Uart_t::ISendViaDMA() {
         dmaStreamEnable(UART_DMA_TX);
     }
 }
+#endif
 
 #if 1 // ==== Print Now ====
 static inline void FPutCharNow(char c) {
-#if defined STM32L1XX_MD || defined STM32F2XX || defined STM32F4XX
+#if defined STM32L1XX_MD || defined STM32F2XX || defined STM32F4XX || defined STM32F10X_LD_VL
     while(!(UART->SR & USART_SR_TXE));
     UART_TX_REG = c;
     while(!(UART->SR & USART_SR_TXE));
@@ -83,6 +101,16 @@ void Uart_t::PrintfNow(const char *S, ...) {
     kl_vsprintf(FPutCharNow, 99999, S, args);
     va_end(args);
 }
+
+extern "C" {
+void PrintfCNow(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    kl_vsprintf(FPutCharNow, 99999, format, args);
+    va_end(args);
+}
+}
+
 #endif
 
 #if UART_RX_ENABLED
@@ -131,22 +159,20 @@ static void UartRxThread(void *arg) {
 #endif
 
 // ==== Init & DMA ====
-// Wrapper for TX IRQ
-extern "C" {
-void CmdUartTxIrq(void *p, uint32_t flags) { Uart.IRQDmaTxHandler(); }
-}
 
-void Uart_t::Init(uint32_t ABaudrate) {
-    PinSetupAlterFunc(UART_GPIO, UART_TX_PIN, omPushPull, pudNone, UART_AF);
+void Uart_t::Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APinTx) {
+    PinSetupAlterFunc(PGpioTx, APinTx, omPushPull, pudNone, UART_AF);
     IBaudrate = ABaudrate;
     // ==== USART configuration ====
     UART_RCC_ENABLE();
     OnAHBFreqChange();  // Setup baudrate
     UART->CR2 = 0;
-    // ==== DMA ====
-    dmaStreamAllocate     (UART_DMA_TX, IRQ_PRIO_HIGH, CmdUartTxIrq, NULL);
+#if UART_USE_DMA    // ==== DMA ====
+    dmaStreamAllocate     (UART_DMA_TX, IRQ_PRIO_MEDIUM, CmdUartTxIrq, NULL);
     dmaStreamSetPeripheral(UART_DMA_TX, &UART_TX_REG);
     dmaStreamSetMode      (UART_DMA_TX, UART_DMA_TX_MODE);
+    IDmaIsIdle = true;
+#endif
 
 #if UART_RX_ENABLED
     UART->CR1 = USART_CR1_TE | USART_CR1_RE;        // TX & RX enable
@@ -164,32 +190,23 @@ void Uart_t::Init(uint32_t ABaudrate) {
     chThdCreateStatic(waUartRxThread, sizeof(waUartRxThread), LOWPRIO, (tfunc_t)UartRxThread, NULL);
 #else
     UART->CR1 = USART_CR1_TE;     // Transmitter enabled
+#if UART_USE_DMA
     UART->CR3 = USART_CR3_DMAT;   // Enable DMA at transmitter
+#endif
 #endif
     UART->CR1 |= USART_CR1_UE;    // Enable USART
 }
 
 void Uart_t::OnAHBFreqChange() {
-#if defined STM32L1XX_MD
+#if defined STM32L1XX_MD || defined STM32F100_MCUCONF
     if(UART == USART1) UART->BRR = Clk.APB2FreqHz / IBaudrate;
     else               UART->BRR = Clk.APB1FreqHz / IBaudrate;
 #elif defined STM32F030
     UART->BRR = Clk.APBFreqHz / IBaudrate;
-#elif defined STM32F2XX
+#elif defined STM32F2XX || defined STM32F4XX
     if(UART == USART1 or UART == USART6)
         UART->BRR = Clk.APB2FreqHz / IBaudrate;
     else
         UART->BRR = Clk.APB1FreqHz / IBaudrate;
 #endif
-}
-
-// ==== TX DMA IRQ ====
-void Uart_t::IRQDmaTxHandler() {
-    dmaStreamDisable(UART_DMA_TX);    // Registers may be changed only when stream is disabled
-    IFullSlotsCount -= ITransSize;
-    PRead += ITransSize;
-    if(PRead >= (TXBuf + UART_TXBUF_SZ)) PRead = TXBuf; // Circulate pointer
-
-    if(IFullSlotsCount == 0) IDmaIsIdle = true; // Nothing left to send
-    else ISendViaDMA();
 }

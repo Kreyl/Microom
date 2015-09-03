@@ -16,12 +16,14 @@
 // Set to true if RX needed
 #define UART_RX_ENABLED     FALSE
 
+#define UART_USE_DMA        TRUE
+
 // UART
 #define UART                USART1
 #define UART_RCC_ENABLE()   rccEnableUSART1(FALSE)
 #define UART_RCC_DISABLE()  rccDisableUSART1(FALSE)
 
-#if defined STM32L1XX_MD
+#if defined STM32L1XX_MD || defined STM32F100_MCUCONF
 #define UART_AF             AF7 // for USART1 @ GPIOA
 #define UART_TX_REG         UART->DR
 #define UART_RX_REG         UART->DR
@@ -44,8 +46,6 @@
 
 // ==== TX ====
 #define UART_TXBUF_SZ       207
-#define UART_GPIO           GPIOB
-#define UART_TX_PIN         6
 
 #define UART_DMA_TX_MODE    STM32_DMA_CR_CHSEL(UART_DMA_CHNL) | \
                             DMA_PRIORITY_LOW | \
@@ -75,32 +75,43 @@ typedef Cmd_t<99> UartCmd_t;
 
 class Uart_t {
 private:
-    char TXBuf[UART_TXBUF_SZ];
-    char *PRead, *PWrite;
-    bool IDmaIsIdle;
-    uint32_t IFullSlotsCount, ITransSize;
     uint32_t IBaudrate;
+#if UART_USE_DMA
+    char TXBuf[UART_TXBUF_SZ];
+    char *PRead = TXBuf, *PWrite = TXBuf;
+    bool IDmaIsIdle = true;
+    uint32_t IFullSlotsCount = 0, ITransSize;
+    void ISendViaDMA();
+#endif
 #if UART_RX_ENABLED
     int32_t SzOld, RIndx;
     uint8_t IRxBuf[UART_RXBUF_SZ];
     Thread *IPThd;
 #endif
-    void ISendViaDMA();
 public:
-    void Printf(const char *S, ...);
-    void PrintfI(const char *S, ...);
-    void FlushTx() { while(!IDmaIsIdle); }  // wait DMA
-    void PrintfNow(const char *S, ...);
-    void Init(uint32_t ABaudrate);
+#if UART_RX_ENABLED
+    void Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APinTx, GPIO_TypeDef *PGpioRx, const uint16_t APinRx);
+#else
+    void Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APinTx);
+#endif
     void DeInit() {
         UART->CR1 &= ~USART_CR1_UE; // UART Disable
         UART_RCC_DISABLE();
     }
     void OnAHBFreqChange();
+#if UART_USE_DMA
+    void Printf(const char *S, ...);
+    void PrintfI(const char *S, ...);
+    void FlushTx() { while(!IDmaIsIdle); }  // wait DMA
+#endif
+    void PrintfNow(const char *S, ...);
+
     // Inner use
+#if UART_USE_DMA
     void IRQDmaTxHandler();
     void IPutChar(char c);
     void IPrintf(const char *format, va_list args);
+#endif
 #if UART_RX_ENABLED
     UartCmd_t Cmd;
     void SignalCmdProcessed();
@@ -109,21 +120,6 @@ public:
     void Reply(const char* CmdCode, int32_t Data) { Printf("%S,%d\r\n", CmdCode, Data); }
     void Ack(int32_t Result) { Printf("\r\nAck %d\r\n", Result); }
 #endif
-    Uart_t() {
-//        for(uint32_t i=0; i<UART_TXBUF_SZ; i++) TXBuf[i] = 0;
-        PWrite = TXBuf;
-        PRead = TXBuf;
-        IDmaIsIdle = true;
-        IFullSlotsCount = 0;
-        ITransSize = 0;
-        IBaudrate = 115200;
-#if UART_RX_ENABLED
-//        for(uint32_t i=0; i<UART_RXBUF_SZ; i++) IRxBuf[i] = 0;
-        SzOld=0;
-        RIndx=0;
-        IPThd = nullptr;
-#endif
-    }
 };
 
 extern Uart_t Uart;

@@ -133,6 +133,11 @@
  *
  * @isr
  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 OSAL_IRQ_HANDLER(SysTick_Handler) {
 
   OSAL_IRQ_PROLOGUE();
@@ -143,6 +148,9 @@ OSAL_IRQ_HANDLER(SysTick_Handler) {
 
   OSAL_IRQ_EPILOGUE();
 }
+#ifdef __cplusplus
+}
+#endif
 #endif /* OSAL_ST_MODE == OSAL_ST_MODE_PERIODIC */
 
 #if (OSAL_ST_MODE == OSAL_ST_MODE_FREERUNNING) || defined(__DOXYGEN__)
@@ -152,6 +160,9 @@ OSAL_IRQ_HANDLER(SysTick_Handler) {
  *
  * @isr
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
 OSAL_IRQ_HANDLER(ST_HANDLER) {
 
   OSAL_IRQ_PROLOGUE();
@@ -161,7 +172,6 @@ OSAL_IRQ_HANDLER(ST_HANDLER) {
      is simply ignored.*/
   if ((STM32_ST_TIM->SR & TIM_SR_CC1IF) != 0U) {
     STM32_ST_TIM->SR = 0U;
-
     osalSysLockFromISR();
     osalOsTimerHandlerI();
     osalSysUnlockFromISR();
@@ -169,6 +179,9 @@ OSAL_IRQ_HANDLER(ST_HANDLER) {
 
   OSAL_IRQ_EPILOGUE();
 }
+#ifdef __cplusplus
+}
+#endif
 #endif /* OSAL_ST_MODE == OSAL_ST_MODE_FREERUNNING */
 
 /*===========================================================================*/
