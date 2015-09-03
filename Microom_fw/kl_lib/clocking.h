@@ -254,6 +254,9 @@ public:
     uint8_t SetupPLLDividers(uint8_t InputDiv_M, uint16_t Multi_N, PllSysDiv_P_t SysDiv_P, uint8_t UsbDiv_Q);
     void UpdateFreqValues();
     uint8_t SetupFlashLatency(uint8_t AHBClk_MHz, uint16_t Voltage_mV=3300);
+    // Disabling the prefetch buffer avoids extra Flash access that consumes 20 mA for 128-bit line fetching.
+    void EnablePrefetch()  { FLASH->ACR |=  FLASH_ACR_PRFTEN; }
+    void DisablePrefetch() { FLASH->ACR &= ~FLASH_ACR_PRFTEN; }
     // Systick init: the timer is required for OS
 #if !defined STM32F4xx_MCUCONF
     void InitSysTick() {

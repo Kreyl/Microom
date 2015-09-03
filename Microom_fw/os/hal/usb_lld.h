@@ -490,7 +490,7 @@ struct USBDriver {
  *
  * @api
  */
-#define usb_lld_connect_bus(usbp) ((usbp)->otg->GCCFG |= GCCFG_VBUSBSEN)
+#define usb_lld_connect_bus(usbp) ((usbp)->otg->GCCFG |= GCCFG_NOVBUSSENS | GCCFG_VBUSBSEN)
 
 /**
  * @brief   Disconnect the USB device.

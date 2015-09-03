@@ -28,9 +28,7 @@ public:
         chEvtSignalI(PThread, Evt);
         chSysUnlock();
     }
-    void SignalEvtI(eventmask_t Evt) {
-        chEvtSignalI(PThread, Evt);
-        }
+    void SignalEvtI(eventmask_t Evt) { chEvtSignalI(PThread, Evt); }
     void OnUartCmd(Uart_t *PUart);
     // Inner use
     void ITask();
