@@ -10,7 +10,7 @@
 #include "descriptors_cdc.h"
 #include "main.h"
 
-SerialUSBDriver SDU2;
+UsbCDC_t UsbCDC;
 
 #if 1 // ========================== Endpoints ==================================
 // ==== EP1 ====
@@ -63,7 +63,7 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
             usbInitEndpointI(usbp, USBD2_DATA_IN_EP, &ep1config);
             usbInitEndpointI(usbp, USBD2_INTERRUPT_REQUEST_EP, &ep2config);
 
-            sduConfigureHookI(&SDU2);   // Resetting the state of the CDC subsystem
+            sduConfigureHookI(&UsbCDC.SDU2);   // Resetting the state of the CDC subsystem
             App.SignalEvtI(EVTMSK_USB_READY);
             chSysUnlockFromISR();
             return;
@@ -96,5 +96,44 @@ const SerialUSBConfig SerUsbCfg = {
 };
 #endif
 
+void UsbCDC_t::Init() {
+    // GPIO
+    PinSetupAlterFunc(GPIOA, 11, omOpenDrain, pudNone, AF10);
+    PinSetupAlterFunc(GPIOA, 12, omOpenDrain, pudNone, AF10);
+    // Objects
+    sduObjectInit(&SDU2);
+    sduStart(&SDU2, &SerUsbCfg);
+}
 
+void UsbCDC_t::Connect() {
+    usbDisconnectBus(SerUsbCfg.usbp);
+    chThdSleepMilliseconds(1500);
+    usbStart(SerUsbCfg.usbp, &UsbCfg);
+    usbConnectBus(SerUsbCfg.usbp);
+}
+
+static inline void uFPutChar(char c) {
+    UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, c);
+}
+
+void UsbCDC_t::Printf(const char *format, ...) {
+    chSysLock();
+    va_list args;
+    va_start(args, format);
+    IPrintf(format, args);
+    va_end(args);
+    chSysUnlock();
+}
+
+void UsbCDC_t::PrintfI(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    IPrintf(format, args);
+    va_end(args);
+}
+
+void UsbCDC_t::IPrintf(const char *format, va_list args) {
+    kl_vsprintf(uFPutChar, 0xFFFF, format, args);
+
+}
 

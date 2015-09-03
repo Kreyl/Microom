@@ -16,9 +16,14 @@ static THD_WORKING_AREA(waThread1, 128);
 static THD_FUNCTION(Thread1, arg) {
     chRegSetThreadName("blinker");
     while (true) {
-        chThdSleepMilliseconds(702);
-        if(SDU2.config->usbp->state == USB_ACTIVE) {
-            chprintf((BaseSequentialStream*)&SDU2, "aga\r");
+        chThdSleepMilliseconds(450);
+
+        if(UsbCDC.IsActive()) {
+            msg_t m = UsbCDC.SDU2.vmt->get(&UsbCDC.SDU2);
+            if(m > 0) UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, (uint8_t)m);
+
+//            UsbCDC.Printf("o");
+//            UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, 'a');
         }
     }
 }
@@ -54,17 +59,8 @@ int main(void) {
     App.InitThread();
 
     // ==== USB ====
-    // GPIO
-    PinSetupAlterFunc(GPIOA, 11, omOpenDrain, pudNone, AF10);
-    PinSetupAlterFunc(GPIOA, 12, omOpenDrain, pudNone, AF10);
-    // Objects
-    sduObjectInit(&SDU2);
-    sduStart(&SDU2, &SerUsbCfg);
-    // Connect
-    usbDisconnectBus(SerUsbCfg.usbp);
-    chThdSleepMilliseconds(1500);
-    usbStart(SerUsbCfg.usbp, &UsbCfg);
-    usbConnectBus(SerUsbCfg.usbp);
+    UsbCDC.Init();
+    UsbCDC.Connect();
 
     chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
 
