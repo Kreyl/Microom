@@ -7,7 +7,7 @@
 
 #include "main.h"
 #include "math.h"
-#include "usb_cdc.h"
+#include "usb_audio.h"
 #include "chprintf.h"
 
 App_t App;
@@ -15,17 +15,17 @@ App_t App;
 static THD_WORKING_AREA(waThread1, 128);
 static THD_FUNCTION(Thread1, arg) {
     chRegSetThreadName("blinker");
-    while (true) {
+    while(true) {
         chThdSleepMilliseconds(450);
-
-        if(UsbCDC.IsActive()) {
-            msg_t m = UsbCDC.SDU2.vmt->get(&UsbCDC.SDU2);
-            if(m > 0) UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, (uint8_t)m);
+//
+//        if(UsbCDC.IsActive()) {
+//            msg_t m = UsbCDC.SDU2.vmt->get(&UsbCDC.SDU2);
+//            if(m > 0) UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, (uint8_t)m);
 
 //            UsbCDC.Printf("o");
 //            UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, 'a');
-        }
-    }
+//        }
+    } // while true
 }
 
 
@@ -59,8 +59,8 @@ int main(void) {
     App.InitThread();
 
     // ==== USB ====
-    UsbCDC.Init();
-    UsbCDC.Connect();
+    UsbAu.Init();
+    UsbAu.Connect();
 
     chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
 
