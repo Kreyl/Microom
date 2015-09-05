@@ -182,45 +182,68 @@ typedef struct {
 } __attribute__ ((__packed__)) StringDescriptor_t;
 
 // U.S. English language identifier
-static const StringDescriptor_t LanguageString = {
-        bLength: USB_STRING_LEN(2),
-        bDescriptorType: USB_DESCRIPTOR_STRING,
-        bString: {0x09, 0x04}   // == 0409
+static const uint8_t LanguageString[] = {
+        USB_DESC_BYTE (4),      // bLength
+        USB_DESC_BYTE (USB_DESCRIPTOR_STRING),  // bDescriptorType
+        USB_DESC_WORD (0x0409)  // wLANGID (U.S. English)
 };
 
 // Vendor string
-static const StringDescriptor_t ManufacturerString = {
-        bLength: USB_STRING_LEN(8),
-        bDescriptorType: USB_DESCRIPTOR_STRING,
-        bString: {'O','s','t','r','a','n','n','a'}
+static const uint8_t VendorString[] = {
+        USB_DESC_BYTE (USB_STRING_LEN(8)),
+        USB_DESC_BYTE (USB_DESCRIPTOR_STRING),  // bDescriptorType
+        USB_DESC_WORD('O'),
+        USB_DESC_WORD('s'),
+        USB_DESC_WORD('t'),
+        USB_DESC_WORD('r'),
+        USB_DESC_WORD('a'),
+        USB_DESC_WORD('n'),
+        USB_DESC_WORD('n'),
+        USB_DESC_WORD('a'),
 };
 
 // Device Description string
-static const StringDescriptor_t ProductString = {
-        bLength: USB_STRING_LEN(11),
-        bDescriptorType: USB_DESCRIPTOR_STRING,
-        bString: {'A','u','d','i','o',' ','I','n','p','u','t'}
+static const uint8_t ProductString[] = {
+        USB_DESC_BYTE (USB_STRING_LEN(11)),
+        USB_DESC_BYTE (USB_DESCRIPTOR_STRING),  // bDescriptorType
+        USB_DESC_WORD('A'),
+        USB_DESC_WORD('u'),
+        USB_DESC_WORD('d'),
+        USB_DESC_WORD('i'),
+        USB_DESC_WORD('o'),
+        USB_DESC_WORD(' '),
+        USB_DESC_WORD('I'),
+        USB_DESC_WORD('n'),
+        USB_DESC_WORD('p'),
+        USB_DESC_WORD('u'),
+        USB_DESC_WORD('t'),
 };
 
 // Serial number string
-static const StringDescriptor_t SerialNumber = {
-        bLength: USB_STRING_LEN(3),
-        bDescriptorType: USB_DESCRIPTOR_STRING,
-        bString: {1, 2, 3}
+static const uint8_t SerialNumber[] = {
+        USB_DESC_BYTE (USB_STRING_LEN(3)),
+        USB_DESC_BYTE (USB_DESCRIPTOR_STRING),  // bDescriptorType
+        USB_DESC_WORD('1'),
+        USB_DESC_WORD('2'),
+        USB_DESC_WORD('3'),
 };
+
 
 // Strings wrappers array
 static const USBDescriptor DescStrings[] = {
-        {sizeof LanguageString,     (uint8_t*)&LanguageString},
-        {sizeof ManufacturerString, (uint8_t*)&ManufacturerString},
-        {sizeof ProductString,      (uint8_t*)&ProductString},
-        {sizeof SerialNumber,       (uint8_t*)&SerialNumber}
+        {sizeof LanguageString, LanguageString},
+        {sizeof VendorString,   VendorString},
+        {sizeof ProductString,  ProductString},
+        {sizeof SerialNumber,   SerialNumber}
 };
 #endif
 
+//extern void PrintfC(const char *format, ...);
+
 // Handles the GET_DESCRIPTOR callback. All required descriptors must be handled here
 const USBDescriptor *GetDescriptor(USBDriver *usbp, uint8_t dtype, uint8_t dindex, uint16_t lang) {
-    switch (dtype) {
+//    PrintfC("\rGetDsc: t=%u; i=%u", dtype, dindex);
+    switch(dtype) {
         case USB_DESCRIPTOR_DEVICE:
             return &DeviceDescriptor;
             break;
@@ -228,7 +251,10 @@ const USBDescriptor *GetDescriptor(USBDriver *usbp, uint8_t dtype, uint8_t dinde
             return &ConfigurationDescriptor;
             break;
         case USB_DESCRIPTOR_STRING:
-            if (dindex < 4) return &DescStrings[dindex];
+            if(dindex < 4) {
+//                PrintfC("\rStr: %u  %A", DescStrings[dindex].ud_size, DescStrings[dindex].ud_string, DescStrings[dindex].ud_size, ' ');
+                return &DescStrings[dindex];
+            }
     } // switch
     return NULL;
 }

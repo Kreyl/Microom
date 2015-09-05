@@ -35,23 +35,6 @@ static const USBEndpointConfig ep1config = {
     2,                      // in_multiplier: Determines the space allocated for the TXFIFO as multiples of the packet size
     NULL                    // setup_buf: Pointer to a buffer for setup packets. Set this field to NULL for non-control endpoints
 };
-
-// ==== EP2 ====
-static USBInEndpointState ep2instate;
-
-// EP2 initialization structure (IN only).
-static const USBEndpointConfig ep2config = {
-    USB_EP_MODE_TYPE_INTR,
-    NULL,
-    sduInterruptTransmitted,
-    NULL,
-    16,
-    0,
-    &ep2instate,
-    NULL,
-    1,
-    NULL
-};
 #endif
 
 #if 1 // ============================ Events ===================================
@@ -81,11 +64,36 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
 }
 #endif
 
+struct SetupPkt_t {
+    uint8_t bmRequestType;
+    uint8_t bRequest;
+    uint16_t wValue;
+    uint16_t wIndex;
+    uint16_t wLength;
+};
+
+/* true         Message handled internally.
+ * false        Message not handled. */
+bool AudioRequestsHook(USBDriver *usbp) {
+    SetupPkt_t *Setup = (SetupPkt_t*)usbp->setup;
+    if(Setup->bmRequestType == 0x01) { // Host2Device, standard, recipient=interface
+        if(Setup->bRequest == USB_REQ_SET_INTERFACE) {
+            if(Setup->wIndex == 1) {
+                // wValue contains alternate setting
+                usbSetupTransfer(usbp, NULL, 0, NULL);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
 #if 1  // ==== USB driver configuration ====
 const USBConfig UsbCfg = {
     usb_event,          // This callback is invoked when an USB driver event is registered
     GetDescriptor,      // Device GET_DESCRIPTOR request callback
-    NULL, //sduRequestsHook,    // This hook allows to be notified of standard requests or to handle non standard requests
+    AudioRequestsHook,  // This hook allows to be notified of standard requests or to handle non standard requests
     NULL                // Start Of Frame callback
 };
 
