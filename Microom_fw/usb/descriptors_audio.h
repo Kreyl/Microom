@@ -9,7 +9,7 @@
 #define USB_DESCRIPTORS_AUDIO_H_
 
 // Endpoints to be used
-#define EP_DATA_IN_ID                   1
+#define EP_DATA_IN_ID       1
 
 // Endpoint Sizes for Full-Speed devices
 #define EP0_SZ              64  // Control Endpoint must have a packet size of 64 bytes

@@ -17,7 +17,7 @@ static THD_FUNCTION(Thread1, arg) {
     chRegSetThreadName("blinker");
     while(true) {
         chThdSleepMilliseconds(450);
-//
+
 //        if(UsbCDC.IsActive()) {
 //            msg_t m = UsbCDC.SDU2.vmt->get(&UsbCDC.SDU2);
 //            if(m > 0) UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, (uint8_t)m);
@@ -78,6 +78,17 @@ void App_t::ITask() {
         if(EvtMsk & EVTMSK_USB_READY) {
             Uart.Printf("\rUsbReady");
             PinSet(GPIOB, 10);
+        }
+        if(EvtMsk & EVTMSK_USB_SUSPEND) {
+            Uart.Printf("\rUsbSuspend");
+            PinClear(GPIOB, 10);
+        }
+
+        if(EvtMsk & EVTMSK_START_LISTEN) {
+            UsbAu.Put(0);           // First dummy sample
+        }
+        if(EvtMsk & EVTMSK_STOP_LISTEN) {
+
         }
 
 //        if(EvtMsk & EVTMSK_USB_DATA_OUT) {
