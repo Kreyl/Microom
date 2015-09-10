@@ -226,7 +226,8 @@ enum AHBDiv_t {
 enum APBDiv_t {apbDiv1=0b000, apbDiv2=0b100, apbDiv4=0b101, apbDiv8=0b110, apbDiv16=0b111};
 enum PllSysDiv_P_t {pllSysDiv2=0b00, pllSysDiv4=0b01, pllSysDiv6=0b10, pllSysDiv8=0b11};
 enum Mco1Src_t {mco1HSI=0x00000000, mco1LSE=0x00200000, mco1HSE=0x00400000, mco1PLL=0x00600000};
-enum McoDiv_t {mcoDiv1=0x00000000, mcoDiv2=0x04000000, mcoDiv3=0x05000000, mcoDiv4=0x06000000, mcoDiv5=0x07000000};
+enum Mco2Src_t {mco2Sys=0x00000000, mco2PLLI2S=0x40000000, mco2HSE=0x80000000, mco2PLL=0xC0000000};
+enum McoDiv_t {mcoDiv1=0b000, mcoDiv2=0b100, mcoDiv3=0b101, mcoDiv4=0b110, mcoDiv5=0b111};
 
 class Clk_t {
 private:
@@ -257,16 +258,6 @@ public:
     // Disabling the prefetch buffer avoids extra Flash access that consumes 20 mA for 128-bit line fetching.
     void EnablePrefetch()  { FLASH->ACR |=  FLASH_ACR_PRFTEN; }
     void DisablePrefetch() { FLASH->ACR &= ~FLASH_ACR_PRFTEN; }
-    // Systick init: the timer is required for OS
-#if !defined STM32F4xx_MCUCONF
-    void InitSysTick() {
-        __disable_irq();
-        SysTick->LOAD = AHBFreqHz / CH_FREQUENCY - 1;
-        SysTick->VAL = 0;
-        SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk;
-        __enable_irq();
-    }
-#endif
     // Special frequencies
     void SetFreq12Mhz() {
         if(AHBFreqHz < 12000000) SetupFlashLatency(12); // Rise flash latency now if current freq > required
@@ -284,9 +275,19 @@ public:
 
     void PrintFreqs();
 
+    // I2S
+    void SetupI2SClk(uint32_t PLL_I2S_N, uint32_t PLL_I2S_R) {
+        RCC->CFGR &= ~RCC_CFGR_I2SSRC;              // PLLI2S clock used as I2S clock source
+        RCC->PLLI2SCFGR = (PLL_I2S_N << 6) | (PLL_I2S_R << 28); // Configure PLLI2S
+        RCC->CR |= RCC_CR_PLLI2SON;                 // Enable PLLI2S
+        while((RCC->CR & RCC_CR_PLLI2SRDY) == 0);   // Wait till PLLI2S is ready
+    }
+
     // Clock output
     void MCO1Enable(Mco1Src_t Src, McoDiv_t Div);
     void MCO1Disable();
+    void MCO2Enable(Mco2Src_t Src, McoDiv_t Div);
+    void MCO2Disable();
 };
 
 extern Clk_t Clk;

@@ -9,8 +9,10 @@
 #include "math.h"
 #include "usb_audio.h"
 #include "chprintf.h"
+#include "pcm1865.h"
 
 App_t App;
+PCM1865_t Pcm;
 
 static THD_WORKING_AREA(waThread1, 128);
 static THD_FUNCTION(Thread1, arg) {
@@ -18,13 +20,6 @@ static THD_FUNCTION(Thread1, arg) {
     while(true) {
         chThdSleepMilliseconds(450);
 
-//        if(UsbCDC.IsActive()) {
-//            msg_t m = UsbCDC.SDU2.vmt->get(&UsbCDC.SDU2);
-//            if(m > 0) UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, (uint8_t)m);
-
-//            UsbCDC.Printf("o");
-//            UsbCDC.SDU2.vmt->put(&UsbCDC.SDU2, 'a');
-//        }
     } // while true
 }
 
@@ -41,11 +36,15 @@ int main(void) {
     Clk.SetupBusDividers(ahbDiv1, apbDiv2, apbDiv2);
     if((ClkResult = Clk.SwitchToPLL()) == 0) Clk.HSIDisable();
     Clk.UpdateFreqValues();
+    // I2S Clk
+    Clk.SetupI2SClk(192, 2);
 
     // Init OS
     halInit();
     chSysInit();
 
+//    Clk.MCO1Enable(mco1PLL, mcoDiv4);
+    Clk.MCO2Enable(mco2PLLI2S, mcoDiv5);
     PinSetupOut(GPIOB, 10, omPushPull, pudNone);
     PinSetupOut(GPIOB, 8, omPushPull, pudNone);
 
@@ -58,9 +57,12 @@ int main(void) {
 
     App.InitThread();
 
+    Pcm.Init();
+    Pcm.SetGain(pacADC1L, 2);
+
     // ==== USB ====
-    UsbAu.Init();
-    UsbAu.Connect();
+//    UsbAu.Init();
+//    UsbAu.Connect();
 
     chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
 
@@ -72,9 +74,7 @@ __attribute__ ((__noreturn__))
 void App_t::ITask() {
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
-//            // ==== Filter ====
-//            y0 = PCurrentFilter->AddXAndCalculate(y0);
-
+#if 1 // ==== USB ====
         if(EvtMsk & EVTMSK_USB_READY) {
             Uart.Printf("\rUsbReady");
             PinSet(GPIOB, 10);
@@ -90,11 +90,9 @@ void App_t::ITask() {
         if(EvtMsk & EVTMSK_STOP_LISTEN) {
 
         }
+#endif
 
-//        if(EvtMsk & EVTMSK_USB_DATA_OUT) {
-//            LedBlink(54);
-//            while(UsbUart.ProcessOutData() == pdrNewCmd) OnUartCmd();
-//        }
+
     } // while true
 }
 

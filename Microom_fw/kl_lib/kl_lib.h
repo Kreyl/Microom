@@ -15,7 +15,7 @@
 #include "clocking.h"
 
 // Lib version
-#define KL_LIB_VERSION      20150827_0054
+#define KL_LIB_VERSION      "20150908_0055"
 
 #if defined STM32L1XX_MD
 #include "stm32l1xx.h"
@@ -561,6 +561,8 @@ public:
     void Set(uint8_t AValue) const { if(AValue != 0) PinSet(PGpio, Pin); else PinClear(PGpio, Pin); }
     void SetHi() const { PinSet(PGpio, Pin); }
     void SetLo() const { PinClear(PGpio, Pin); }
+    PinOutput_t(GPIO_TypeDef *APGpio, uint16_t APin, PinOutMode_t AOutMode) :
+        PGpio(APGpio), Pin(APin), OutMode(AOutMode) {}
 };
 
 // ==== Digital Input Pin ====
@@ -727,7 +729,7 @@ static inline void ClearStandbyFlag() { PWR->CR |= PWR_CR_CSBF; }
 #endif
 #endif
 
-#if 0 // ============================== SPI ====================================
+#if 1 // ============================== SPI ====================================
 enum CPHA_t {cphaFirstEdge, cphaSecondEdge};
 enum CPOL_t {cpolIdleLow, cpolIdleHigh};
 enum SpiBaudrate_t {
@@ -759,7 +761,7 @@ public:
         if(CPOL == cpolIdleHigh) PSpi->CR1 |= SPI_CR1_CPOL;     // CPOL
         if(CPHA == cphaSecondEdge) PSpi->CR1 |= SPI_CR1_CPHA;   // CPHA
         PSpi->CR1 |= ((uint16_t)Baudrate) << 3;                 // Baudrate
-#if defined STM32L1XX_MD || defined STM32F10X_LD_VL
+#if defined STM32L1XX_MD || defined STM32F10X_LD_VL || defined STM32F4XX
         PSpi->CR2 = 0;
 #elif defined STM32F030
         PSpi->CR2 = (uint16_t)0b1111 << 8;  // 16 bit data size only

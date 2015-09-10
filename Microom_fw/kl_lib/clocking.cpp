@@ -510,7 +510,7 @@ uint8_t Clk_t::SetupPLLDividers(uint8_t InputDiv_M, uint16_t Multi_N, PllSysDiv_
 uint8_t Clk_t::SetupFlashLatency(uint8_t AHBClk_MHz, uint16_t Voltage_mV) {
     uint32_t tmp = FLASH->ACR;
     tmp &= ~FLASH_ACR_LATENCY;  // Clear Latency bits
-    tmp |= FLASH_ACR_ICEN | FLASH_ACR_DCEN;     // Enable instruction & data prefetch by ART
+    tmp |= FLASH_ACR_ICEN | FLASH_ACR_DCEN; // Enable instruction & data prefetch by ART
     if((2700 < Voltage_mV) and (Voltage_mV <= 3600)) {
         if     (AHBClk_MHz <=  30) tmp |= FLASH_ACR_LATENCY_0WS;
         else if(AHBClk_MHz <=  60) tmp |= FLASH_ACR_LATENCY_1WS;
@@ -552,14 +552,22 @@ uint8_t Clk_t::SetupFlashLatency(uint8_t AHBClk_MHz, uint16_t Voltage_mV) {
 }
 
 void Clk_t::MCO1Enable(Mco1Src_t Src, McoDiv_t Div) {
-    PinSetupAlterFunc(GPIOA, 8, omPushPull, pudNone, AF0, ps50MHz);
+    PinSetupAlterFunc(GPIOA, 8, omPushPull, pudNone, AF0, ps100MHz);
     RCC->CFGR &= ~(RCC_CFGR_MCO1 | RCC_CFGR_MCO1PRE);   // First, disable output and clear settings
-    RCC->CFGR |= ((uint32_t)Src) | ((uint32_t)Div);
+    RCC->CFGR |= ((uint32_t)Src) | ((uint32_t)Div << 24);
 }
-
 void Clk_t::MCO1Disable() {
     PinSetupAnalog(GPIOA, 8);
     RCC->CFGR &= ~(RCC_CFGR_MCO1 | RCC_CFGR_MCO1PRE);
+}
+void Clk_t::MCO2Enable(Mco2Src_t Src, McoDiv_t Div) {
+    PinSetupAlterFunc(GPIOC, 9, omPushPull, pudNone, AF0, ps100MHz);
+    RCC->CFGR &= ~(RCC_CFGR_MCO2 | RCC_CFGR_MCO2PRE);   // First, disable output and clear settings
+    RCC->CFGR |= ((uint32_t)Src) | ((uint32_t)Div << 27);
+}
+void Clk_t::MCO2Disable() {
+    PinSetupAnalog(GPIOC, 9);
+    RCC->CFGR &= ~(RCC_CFGR_MCO2 | RCC_CFGR_MCO2PRE);
 }
 
 void Clk_t::PrintFreqs() {
