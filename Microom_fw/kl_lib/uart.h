@@ -14,7 +14,7 @@
 #include "cmd.h"
 
 // Set to true if RX needed
-#define UART_RX_ENABLED     FALSE
+#define UART_RX_ENABLED     TRUE
 
 #define UART_USE_DMA        TRUE
 
@@ -58,7 +58,6 @@
 #if UART_RX_ENABLED // ==== RX ====
 #define UART_RXBUF_SZ       99 // unprocessed bytes
 #define UART_CMD_BUF_SZ     54 // payload bytes
-#define UART_RX_PIN         7
 
 #define UART_RX_POLLING_MS  99
 #define UART_DMA_RX_MODE    STM32_DMA_CR_CHSEL(UART_DMA_CHNL) | \
@@ -86,7 +85,7 @@ private:
 #if UART_RX_ENABLED
     int32_t SzOld, RIndx;
     uint8_t IRxBuf[UART_RXBUF_SZ];
-    Thread *IPThd;
+    thread_t *IPThd;
 #endif
 public:
 #if UART_RX_ENABLED

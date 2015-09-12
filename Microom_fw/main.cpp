@@ -47,7 +47,7 @@ int main(void) {
     PinSetupOut(GPIOB, 8, omPushPull, pudNone);
 
     // ==== Init hardware ====
-    Uart.Init(115200, GPIOB, 6);
+    Uart.Init(115200, GPIOB, 6, GPIOB, 7);
     Uart.Printf("\r%S %S", APP_NAME, APP_VERSION);
     Clk.PrintFreqs();
 
@@ -55,9 +55,11 @@ int main(void) {
 
     App.InitThread();
 
-    Pcm.Init();
-    chThdSleepMilliseconds(9);  // Let clocks to stabilize
-    Pcm.PrintState();
+//    Pcm.Init();
+//
+//    Pcm.PrintState();
+//    Pcm.EnterRunMode();
+//    Pcm.PrintState();
 //    Pcm.SetGain(pacADC1L, 2);
 
     // ==== USB ====
@@ -91,18 +93,25 @@ void App_t::ITask() {
 
         }
 #endif
-
+        if(EvtMsk & EVTMSK_UART_NEW_CMD) {
+            OnUartCmd(&Uart);
+            Uart.SignalCmdProcessed();
+        }
 
     } // while true
 }
 
 #if 1 // ======================= Command processing ============================
-//void App_t::OnUartCmd(Uart_t *PUart) {
-//    UsbCmd_t *PCmd = UsbUart.PCmd;
-//    __attribute__((unused)) int32_t dw32 = 0;  // May be unused in some configurations
-//    Uart.Printf("\r%S", PCmd->Name);
+void App_t::OnUartCmd(Uart_t *PUart) {
+    UartCmd_t *PCmd = &PUart->Cmd;
+    __attribute__((unused)) int32_t dw32 = 0;  // May be unused in some configurations
+    Uart.Printf("\r%S\r", PCmd->Name);
     // Handle command
-//    if(PCmd->NameIs("#Ping")) UsbUart.Ack(OK);
+    if(PCmd->NameIs("Ping")) PUart->Ack(OK);
+
+    else PUart->Ack(CMD_UNKNOWN);
+}
+
 
 #if 0 // ==== Common ====
     else if(PCmd->NameIs("#SetSmplFreq")) {

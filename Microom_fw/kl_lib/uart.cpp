@@ -116,7 +116,7 @@ void PrintfCNow(const char *format, ...) {
 #if UART_RX_ENABLED
 __attribute__((__noreturn__))
 void Uart_t::IRxTask() {
-    IPThd = chThdSelf();
+    IPThd = chThdGetSelfX();
     while(true) {
         chThdSleepMilliseconds(UART_RX_POLLING_MS);
         // Get number of bytes to process
@@ -126,6 +126,7 @@ void Uart_t::IRxTask() {
         int32_t Sz = UART_RXBUF_SZ - UART_DMA_RX->channel->CNDTR;   // Number of bytes copied to buffer since restart
 #endif
         if(Sz != SzOld) {
+
             int32_t ByteCnt = Sz - SzOld;
             if(ByteCnt < 0) ByteCnt += UART_RXBUF_SZ;   // Handle buffer circulation
             SzOld = Sz;
@@ -136,7 +137,7 @@ void Uart_t::IRxTask() {
                 if(Cmd.PutChar(c) == pdrNewCmd) {
                     chSysLock();
                     App.SignalEvtI(EVTMSK_UART_NEW_CMD);
-                    chSchGoSleepS(THD_STATE_SUSPENDED); // Wait until cmd processed
+                    chSchGoSleepS(CH_STATE_SUSPENDED); // Wait until cmd processed
                     chSysUnlock();  // Will be here when application signals that cmd processed
                 }
             } // for
@@ -146,11 +147,11 @@ void Uart_t::IRxTask() {
 
 void Uart_t::SignalCmdProcessed() {
     chSysLock();
-    if(IPThd->p_state == THD_STATE_SUSPENDED) chSchReadyI(IPThd);
+    if(IPThd->p_state == CH_STATE_SUSPENDED) chSchReadyI(IPThd);
     chSysUnlock();
 }
 
-static WORKING_AREA(waUartRxThread, 128);
+static THD_WORKING_AREA(waUartRxThread, 128);
 __attribute__((__noreturn__))
 static void UartRxThread(void *arg) {
     chRegSetThreadName("UartRx");
@@ -159,8 +160,11 @@ static void UartRxThread(void *arg) {
 #endif
 
 // ==== Init & DMA ====
-
+#if UART_RX_ENABLED
+void Uart_t::Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APinTx, GPIO_TypeDef *PGpioRx, const uint16_t APinRx) {
+#else
 void Uart_t::Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APinTx) {
+#endif
     PinSetupAlterFunc(PGpioTx, APinTx, omPushPull, pudNone, UART_AF);
     IBaudrate = ABaudrate;
     // ==== USART configuration ====
@@ -178,7 +182,7 @@ void Uart_t::Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APin
     UART->CR1 = USART_CR1_TE | USART_CR1_RE;        // TX & RX enable
     UART->CR3 = USART_CR3_DMAT | USART_CR3_DMAR;    // Enable DMA at TX & RX
 
-    PinSetupAlterFunc(UART_GPIO, UART_RX_PIN,  omOpenDrain, pudPullUp, UART_AF);
+    PinSetupAlterFunc(PGpioRx, APinRx,  omOpenDrain, pudPullUp, UART_AF);
 
     dmaStreamAllocate     (UART_DMA_RX, IRQ_PRIO_LOW, nullptr, NULL);
     dmaStreamSetPeripheral(UART_DMA_RX, &UART_RX_REG);
@@ -187,7 +191,7 @@ void Uart_t::Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APin
     dmaStreamSetMode      (UART_DMA_RX, UART_DMA_RX_MODE);
     dmaStreamEnable       (UART_DMA_RX);
     // Thread
-    chThdCreateStatic(waUartRxThread, sizeof(waUartRxThread), LOWPRIO, (tfunc_t)UartRxThread, NULL);
+    chThdCreateStatic(waUartRxThread, sizeof(waUartRxThread), LOWPRIO, UartRxThread, NULL);
 #else
     UART->CR1 = USART_CR1_TE;     // Transmitter enabled
 #if UART_USE_DMA
