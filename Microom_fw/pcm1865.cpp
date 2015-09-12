@@ -33,6 +33,8 @@ void PCM1865_t::Init() {
     ISpi.Setup(PCM_SPI, boMSB, cpolIdleLow, cphaSecondEdge, sbFdiv4);
     ISpi.Enable();
 
+    EnterPowerdownMode();
+
     // ==== I2S ====
     // GPIO
     PinSetupAlterFunc(GPIOC, 6,  omPushPull, pudNone, AF5);  // I2S2 MCK
@@ -58,7 +60,6 @@ void PCM1865_t::Init() {
     ResetRegs();
     SelectPage(0);
 
-
     WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
     // Main ADC Channel selection (everywhere signal is not inverted)
     WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
@@ -71,12 +72,11 @@ void PCM1865_t::Init() {
 //    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
     WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
 
-
-
+    EnterRunMode();
 }
 
 void PCM1865_t::WriteReg(uint8_t Addr, uint8_t Value) {
-    Uart.Printf("\rW: %02X %02X", Addr, Value);
+//    Uart.Printf("\rW: %02X %02X", Addr, Value);
     CS.SetLo();
     Addr = (Addr << 1) | 0x00;  // Write operation
     ISpi.ReadWriteByte(Addr);

@@ -41,8 +41,6 @@ int main(void) {
     halInit();
     chSysInit();
 
-//    Clk.MCO1Enable(mco1PLL, mcoDiv4);
-//    Clk.MCO2Enable(mco2PLLI2S, mcoDiv5);
     PinSetupOut(GPIOB, 10, omPushPull, pudNone);
     PinSetupOut(GPIOB, 8, omPushPull, pudNone);
 
@@ -55,9 +53,8 @@ int main(void) {
 
     App.InitThread();
 
-//    Pcm.Init();
-//
-//    Pcm.PrintState();
+    Pcm.Init();
+
 //    Pcm.EnterRunMode();
 //    Pcm.PrintState();
 //    Pcm.SetGain(pacADC1L, 2);
@@ -108,6 +105,10 @@ void App_t::OnUartCmd(Uart_t *PUart) {
     Uart.Printf("\r%S\r", PCmd->Name);
     // Handle command
     if(PCmd->NameIs("Ping")) PUart->Ack(OK);
+
+    else if(PCmd->NameIs("State"))  Pcm.PrintState();
+    else if(PCmd->NameIs("PwrDwn")) Pcm.EnterPowerdownMode();
+    else if(PCmd->NameIs("Run"))    Pcm.EnterRunMode();
 
     else PUart->Ack(CMD_UNKNOWN);
 }
