@@ -276,9 +276,9 @@ public:
     void PrintFreqs();
 
     // I2S
-    void SetupI2SClk(uint32_t PLL_I2S_N, uint32_t PLL_I2S_R) {
+    void SetupI2SClk(uint32_t APLL_I2S_N, uint32_t APLL_I2S_R) {
         RCC->CFGR &= ~RCC_CFGR_I2SSRC;              // PLLI2S clock used as I2S clock source
-        RCC->PLLI2SCFGR = (PLL_I2S_N << 6) | (PLL_I2S_R << 28); // Configure PLLI2S
+        RCC->PLLI2SCFGR = (APLL_I2S_N << 6) | (APLL_I2S_R << 28); // Configure PLLI2S
         RCC->CR |= RCC_CR_PLLI2SON;                 // Enable PLLI2S
         while((RCC->CR & RCC_CR_PLLI2SRDY) == 0);   // Wait till PLLI2S is ready
     }

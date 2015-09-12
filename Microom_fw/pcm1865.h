@@ -34,6 +34,7 @@ private:
     void SelectPage(uint8_t Page) { WriteReg(0x00, Page); }
 public:
     void Init();
+    void PrintState();
     void SetGain(PcmAdcChnls_t Chnl, int8_t Gain_dB);
 };
 

@@ -36,15 +36,13 @@ int main(void) {
     Clk.SetupBusDividers(ahbDiv1, apbDiv2, apbDiv2);
     if((ClkResult = Clk.SwitchToPLL()) == 0) Clk.HSIDisable();
     Clk.UpdateFreqValues();
-    // I2S Clk
-    Clk.SetupI2SClk(192, 2);
 
     // Init OS
     halInit();
     chSysInit();
 
 //    Clk.MCO1Enable(mco1PLL, mcoDiv4);
-    Clk.MCO2Enable(mco2PLLI2S, mcoDiv5);
+//    Clk.MCO2Enable(mco2PLLI2S, mcoDiv5);
     PinSetupOut(GPIOB, 10, omPushPull, pudNone);
     PinSetupOut(GPIOB, 8, omPushPull, pudNone);
 
@@ -58,7 +56,9 @@ int main(void) {
     App.InitThread();
 
     Pcm.Init();
-    Pcm.SetGain(pacADC1L, 2);
+    chThdSleepMilliseconds(9);  // Let clocks to stabilize
+    Pcm.PrintState();
+//    Pcm.SetGain(pacADC1L, 2);
 
     // ==== USB ====
 //    UsbAu.Init();
