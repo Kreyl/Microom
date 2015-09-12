@@ -22,6 +22,27 @@
 #define I2SSTD_LSB      SPI_I2SCFGR_I2SSTD_1
 #define I2SSTD_PCM      (SPI_I2SCFGR_I2SSTD_0 | SPI_I2SCFGR_I2SSTD_1)
 
+extern PCM1865_t Pcm;
+
+// Wrapper for DMA TX IRQ
+extern "C" {
+void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
+}
+
+// ==== TX DMA IRQ ====
+void PCM1865_t::IRQDmaRxHandler() {
+//    dmaStreamDisable(PCM_DMA_STREAM);
+    int32_t w=0;
+    for(uint32_t i=0; i<PCM_BUF_CNT; i++) {
+        w+= IRxBuf[i];
+//        if(IRxBuf[i] != 0xFFFF)
+//            Uart.PrintfI("\r%d", IRxBuf[i]);
+    }
+//    Uart.PrintfI("\r%d", w / PCM_BUF_CNT);
+}
+
+
+
 void PCM1865_t::Init() {
     CS.Init();
     CS.SetHi();
@@ -42,18 +63,26 @@ void PCM1865_t::Init() {
     PinSetupAlterFunc(GPIOB, 13, omPushPull, pudNone, AF5);  // I2S2_CK BitClk1
     PinSetupAlterFunc(GPIOB, 15, omPushPull, pudNone, AF5);  // I2S2_SD DataOut1
 
-    rccEnableSPI2(FALSE);
+    PCM_I2S_RccEnable();
     // I2S Clk
     RCC->CFGR &= ~RCC_CFGR_I2SSRC;  // Disable external clock
     Clk.SetupI2SClk(128, 5);        // I2S PLL Divider
     // I2S
-    SPI2->CR1 = 0;
-    SPI2->CR2 = 0;
-    SPI2->I2SCFGR = 0;  // Disable I2S
+    PCM_I2S->CR1 = 0;
+    PCM_I2S->CR2 = SPI_CR2_RXDMAEN;
+    PCM_I2S->I2SCFGR = 0;  // Disable I2S
     // Mode=I2S, Master Receive, PcmSync not needed, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
-    SPI2->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
-    SPI2->I2SPR = SPI_I2SPR_MCKOE | (1 << 8) | (uint16_t)12;    // 8000
-    SPI2->I2SCFGR |= SPI_I2SCFGR_I2SE;
+    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
+    PCM_I2S->I2SPR = SPI_I2SPR_MCKOE | (1 << 8) | (uint16_t)12;    // 8000
+    PCM_I2S->I2SCFGR |= SPI_I2SCFGR_I2SE;
+    // ==== DMA ====
+    dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
+    dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_I2S->DR);
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, IRxBuf);
+    dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
+    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
+    dmaStreamEnable       (PCM_DMA_STREAM);
+
     chThdSleepMilliseconds(9);  // Let clocks to stabilize
 
     // ==== Setup regs ====
@@ -73,6 +102,7 @@ void PCM1865_t::Init() {
     WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
 
     EnterRunMode();
+
 }
 
 void PCM1865_t::WriteReg(uint8_t Addr, uint8_t Value) {

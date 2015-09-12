@@ -168,7 +168,9 @@ void Uart_t::Init(uint32_t ABaudrate, GPIO_TypeDef *PGpioTx, const uint16_t APin
     PinSetupAlterFunc(PGpioTx, APinTx, omPushPull, pudNone, UART_AF);
     IBaudrate = ABaudrate;
     // ==== USART configuration ====
-    UART_RCC_ENABLE();
+    if(UART == USART1) {rccEnableUSART1(FALSE); }
+    else if(UART == USART2) {rccEnableUSART2(FALSE); }
+
     OnAHBFreqChange();  // Setup baudrate
     UART->CR2 = 0;
 #if UART_USE_DMA    // ==== DMA ====

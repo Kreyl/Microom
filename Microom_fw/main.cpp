@@ -10,6 +10,7 @@
 #include "usb_audio.h"
 #include "chprintf.h"
 #include "pcm1865.h"
+#include "board.h"
 
 App_t App;
 PCM1865_t Pcm;
@@ -45,7 +46,7 @@ int main(void) {
     PinSetupOut(GPIOB, 8, omPushPull, pudNone);
 
     // ==== Init hardware ====
-    Uart.Init(115200, GPIOB, 6, GPIOB, 7);
+    Uart.Init(115200, UART_GPIO, UART_TX_PIN, UART_GPIO, UART_RX_PIN);
     Uart.Printf("\r%S %S", APP_NAME, APP_VERSION);
     Clk.PrintFreqs();
 

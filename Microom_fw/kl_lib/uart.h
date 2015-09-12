@@ -12,37 +12,12 @@
 #include "kl_sprintf.h"
 #include <cstring>
 #include "cmd.h"
+#include "board.h"
 
 // Set to true if RX needed
 #define UART_RX_ENABLED     TRUE
 
 #define UART_USE_DMA        TRUE
-
-// UART
-#define UART                USART1
-#define UART_RCC_ENABLE()   rccEnableUSART1(FALSE)
-#define UART_RCC_DISABLE()  rccDisableUSART1(FALSE)
-
-#if defined STM32L1XX_MD || defined STM32F100_MCUCONF
-#define UART_AF             AF7 // for USART1 @ GPIOA
-#define UART_TX_REG         UART->DR
-#define UART_RX_REG         UART->DR
-#define UART_DMA_TX         STM32_DMA1_STREAM4
-#define UART_DMA_RX         STM32_DMA1_STREAM5
-#elif defined STM32F030
-#define UART_AF             AF1 // for USART1 @ GPIOA
-#define UART_TX_REG         UART->TDR
-#define UART_RX_REG         UART->RDR
-#define UART_DMA_TX         STM32_DMA1_STREAM2
-#define UART_DMA_RX         STM32_DMA1_STREAM3
-#elif defined STM32F2XX || defined STM32F4XX
-#define UART_AF             AF7
-#define UART_TX_REG         UART->DR
-#define UART_RX_REG         UART->DR
-#define UART_DMA_TX         STM32_DMA2_STREAM7
-#define UART_DMA_RX         STM32_DMA2_STREAM5
-#endif
-#define UART_DMA_CHNL       4
 
 // ==== TX ====
 #define UART_TXBUF_SZ       1024
@@ -95,7 +70,8 @@ public:
 #endif
     void DeInit() {
         UART->CR1 &= ~USART_CR1_UE; // UART Disable
-        UART_RCC_DISABLE();
+        if(UART == USART1) { rccDisableUSART1(FALSE); }
+        else if(UART == USART2) { rccDisableUSART2(FALSE); }
     }
     void OnAHBFreqChange();
 #if UART_USE_DMA
