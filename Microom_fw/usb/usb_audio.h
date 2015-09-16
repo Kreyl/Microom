@@ -10,7 +10,7 @@
 
 #include "kl_buf.h"
 
-#define USB_AUDIO_BUF_CNT   16
+#define USB_AUDIO_BUF_SZ    108
 
 union Sample_t {
     int16_t Word;
@@ -19,10 +19,9 @@ union Sample_t {
 
 class UsbAudio_t {
 private:
-    uint16_t w[2];
-    CircBufNumber_t<int16_t, USB_AUDIO_BUF_CNT> IBuf;
-    Sample_t ISample;
+    uint8_t IBuf[USB_AUDIO_BUF_SZ];
 public:
+    output_queue_t oqueue;
     void Init();
     void Connect();
     void Disconnect();
@@ -30,6 +29,7 @@ public:
     void Put(uint16_t);
     // Inner use
     void IOnDataTransmitted(USBDriver *usbp, usbep_t ep);
+    void IOnConfigured();
 };
 
 extern UsbAudio_t UsbAu;

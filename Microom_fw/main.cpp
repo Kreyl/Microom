@@ -15,16 +15,6 @@
 App_t App;
 PCM1865_t Pcm;
 
-static THD_WORKING_AREA(waThread1, 128);
-static THD_FUNCTION(Thread1, arg) {
-    chRegSetThreadName("blinker");
-    while(true) {
-        chThdSleepMilliseconds(450);
-
-    } // while true
-}
-
-
 int main(void) {
     // ==== Setup clock frequency ====
     uint8_t ClkResult = 1;
@@ -49,22 +39,14 @@ int main(void) {
     Uart.Init(115200, UART_GPIO, UART_TX_PIN, UART_GPIO, UART_RX_PIN);
     Uart.Printf("\r%S %S", APP_NAME, APP_VERSION);
     Clk.PrintFreqs();
-
     if(ClkResult != 0) Uart.Printf("\rXTAL failure");
 
     App.InitThread();
-
     Pcm.Init();
 
-//    Pcm.EnterRunMode();
-//    Pcm.PrintState();
-//    Pcm.SetGain(pacADC1L, 2);
-
     // ==== USB ====
-//    UsbAu.Init();
-//    UsbAu.Connect();
-
-    chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
+    UsbAu.Init();
+    UsbAu.Connect();
 
     // Main cycle
     App.ITask();
@@ -85,7 +67,7 @@ void App_t::ITask() {
         }
 
         if(EvtMsk & EVTMSK_START_LISTEN) {
-            UsbAu.Put(0);           // First dummy sample
+//            UsbAu.Put(0);           // First dummy sample
         }
         if(EvtMsk & EVTMSK_STOP_LISTEN) {
 

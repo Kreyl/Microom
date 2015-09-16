@@ -9,6 +9,7 @@
 #include "pcm1865_regs.h"
 #include "uart.h"
 #include "clocking.h"
+#include "usb_audio.h"
 
 /*
  * Fs = 8kHz
@@ -22,8 +23,6 @@
 #define I2SSTD_LSB      SPI_I2SCFGR_I2SSTD_1
 #define I2SSTD_PCM      (SPI_I2SCFGR_I2SSTD_0 | SPI_I2SCFGR_I2SSTD_1)
 
-extern PCM1865_t Pcm;
-
 // Wrapper for DMA TX IRQ
 extern "C" {
 void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
@@ -31,19 +30,32 @@ void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 
 // ==== TX DMA IRQ ====
 void PCM1865_t::IRQDmaRxHandler() {
-//    dmaStreamDisable(PCM_DMA_STREAM);
-    int32_t w=0;
-    for(uint32_t i=0; i<PCM_BUF_CNT; i++) {
-        w+= IRxBuf[i];
-//        if(IRxBuf[i] != 0xFFFF)
-//            Uart.PrintfI("\r%d", IRxBuf[i]);
-    }
+    dmaStreamDisable(PCM_DMA_STREAM);
+    // Switch buffers
+//    if(PWrite == &IRxBuf[0][0]) {
+//        PWrite = &IRxBuf[1][0];
+//        PRead = &IRxBuf[0][0];
+//    }
+//    else {
+//        PWrite = &IRxBuf[0][0];
+//        PRead = &IRxBuf[1][0];
+//    }
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
+    dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
+    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
+    dmaStreamEnable       (PCM_DMA_STREAM);
 //    Uart.PrintfI("\r%d", w / PCM_BUF_CNT);
+
+    oqWriteTimeout(&UsbAu.oqueue, PRead, (PCM_BUF_CNT * 2),
 }
 
 
 
 void PCM1865_t::Init() {
+    // Variables
+    PWrite = &IRxBuf[0][0];
+    PRead  = &IRxBuf[1][0];
+    // ==== Control SPI ====
     CS.Init();
     CS.SetHi();
     // SPI pins
@@ -78,7 +90,7 @@ void PCM1865_t::Init() {
     // ==== DMA ====
     dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
     dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_I2S->DR);
-    dmaStreamSetMemory0   (PCM_DMA_STREAM, IRxBuf);
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
     dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
     dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
     dmaStreamEnable       (PCM_DMA_STREAM);
