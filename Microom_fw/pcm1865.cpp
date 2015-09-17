@@ -17,6 +17,12 @@
  *
  */
 
+
+/* 8000 Hz sampling freq, 2 bytes per sample. One frame per millisecond
+ * means 8 samples per frame, but every second IN packet is lost. Therefore,
+ * 16 samples per frame required.
+ */
+
 // ST I2S formats
 #define I2SSTD_I2S      0x00
 #define I2SSTD_MSB      SPI_I2SCFGR_I2SSTD_0
@@ -28,28 +34,37 @@ extern "C" {
 void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 }
 
+//static const int16_t dummy[] = {
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
+//};
+
 // ==== TX DMA IRQ ====
 void PCM1865_t::IRQDmaRxHandler() {
     dmaStreamDisable(PCM_DMA_STREAM);
     // Switch buffers
-//    if(PWrite == &IRxBuf[0][0]) {
-//        PWrite = &IRxBuf[1][0];
-//        PRead = &IRxBuf[0][0];
-//    }
-//    else {
-//        PWrite = &IRxBuf[0][0];
-//        PRead = &IRxBuf[1][0];
-//    }
+    if(PWrite == &IRxBuf[0][0]) {
+        PWrite = &IRxBuf[1][0];
+        PRead = &IRxBuf[0][0];
+    }
+    else {
+        PWrite = &IRxBuf[0][0];
+        PRead = &IRxBuf[1][0];
+    }
     dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
     dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
     dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
     dmaStreamEnable       (PCM_DMA_STREAM);
-//    Uart.PrintfI("\r%d", w / PCM_BUF_CNT);
-
-    oqWriteTimeout(&UsbAu.oqueue, PRead, (PCM_BUF_CNT * 2),
+    // Send data to USB
+//    UsbAu.SendBufI((uint8_t*)dummy, (16*2));
+    UsbAu.SendBufI((uint8_t*)PRead, (PCM_BUF_CNT*2));
 }
-
-
 
 void PCM1865_t::Init() {
     // Variables

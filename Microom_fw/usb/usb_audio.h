@@ -10,8 +10,6 @@
 
 #include "kl_buf.h"
 
-#define USB_AUDIO_BUF_SZ    108
-
 union Sample_t {
     int16_t Word;
     uint8_t b[2];
@@ -19,17 +17,17 @@ union Sample_t {
 
 class UsbAudio_t {
 private:
-    uint8_t IBuf[USB_AUDIO_BUF_SZ];
 public:
-    output_queue_t oqueue;
+    bool IsListening = false;
     void Init();
     void Connect();
     void Disconnect();
     bool IsActive() { return false; }
+    // Data
+    void SendBufI(uint8_t *Ptr, uint32_t Len);
+
     void Put(uint16_t);
     // Inner use
-    void IOnDataTransmitted(USBDriver *usbp, usbep_t ep);
-    void IOnConfigured();
 };
 
 extern UsbAudio_t UsbAu;

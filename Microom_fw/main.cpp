@@ -67,7 +67,6 @@ void App_t::ITask() {
         }
 
         if(EvtMsk & EVTMSK_START_LISTEN) {
-//            UsbAu.Put(0);           // First dummy sample
         }
         if(EvtMsk & EVTMSK_STOP_LISTEN) {
 

@@ -21,7 +21,7 @@
                             STM32_DMA_CR_TCIE    |    /* Enable Transmission Complete IRQ */ \
                             STM32_DMA_CR_CIRC         /* Circular buffer enable */
 
-#define PCM_BUF_CNT     32
+#define PCM_BUF_CNT     16
 
 enum PcmAdcChnls_t {pacADC1L = 0x01, pacADC1R = 0x02, pacADC2L = 0x03, pacADC2R = 0x04};
 
