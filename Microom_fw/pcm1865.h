@@ -21,7 +21,13 @@
                             STM32_DMA_CR_TCIE    |    /* Enable Transmission Complete IRQ */ \
                             STM32_DMA_CR_CIRC         /* Circular buffer enable */
 
-#define PCM_BUF_CNT     16
+// 8 samples per ms => 16 samples per two ms;
+#define SAMPLES_PER_MS      8   // for 8kHz sampling freq
+#define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
+#define SAMPLE_SZ           2   // 16bit == 2bytes
+#define PCM_USB_BUF_CNT     (SAMPLES_PER_MS * SENDING_PERIOD)
+#define PCM_BUF_CNT         (SAMPLES_PER_MS * SENDING_PERIOD * 2)   // Two channels
+
 
 enum PcmAdcChnls_t {pacADC1L = 0x01, pacADC1R = 0x02, pacADC2L = 0x03, pacADC2R = 0x04};
 
@@ -29,14 +35,14 @@ class PCM1865_t {
 private:
     Spi_t ISpi;
     PinOutput_t CS{PCM_CS_GPIO, PCM_CS_PIN, omPushPull};
-    int16_t IRxBuf[2][PCM_BUF_CNT], *PWrite;
+    int16_t IRxBuf[2][PCM_BUF_CNT], *PWrite, *PRead;
+    int16_t BufToSend[PCM_USB_BUF_CNT];
     void WriteReg(uint8_t Addr, uint8_t Value);
     uint8_t ReadReg(uint8_t Addr);
     // Commands
     void ResetRegs() { WriteReg(0x00, 0xFF); }
     void SelectPage(uint8_t Page) { WriteReg(0x00, Page); }
 public:
-    int16_t *PRead;
     void Init();
     void PrintState();
     void EnterRunMode() { WriteReg(0x70, 0x70); }

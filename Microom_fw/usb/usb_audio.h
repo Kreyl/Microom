@@ -10,11 +10,6 @@
 
 #include "kl_buf.h"
 
-union Sample_t {
-    int16_t Word;
-    uint8_t b[2];
-} __attribute__((packed));
-
 class UsbAudio_t {
 private:
 public:

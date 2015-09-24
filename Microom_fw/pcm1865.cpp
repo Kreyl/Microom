@@ -34,17 +34,6 @@ extern "C" {
 void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 }
 
-//static const int16_t dummy[] = {
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//        30000,-30000,30000,-30000,30000,-30000,30000,-30000,
-//};
-
 // ==== TX DMA IRQ ====
 void PCM1865_t::IRQDmaRxHandler() {
     dmaStreamDisable(PCM_DMA_STREAM);
@@ -57,13 +46,17 @@ void PCM1865_t::IRQDmaRxHandler() {
         PWrite = &IRxBuf[0][0];
         PRead = &IRxBuf[1][0];
     }
+
     dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
     dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
     dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
     dmaStreamEnable       (PCM_DMA_STREAM);
-    // Send data to USB
-//    UsbAu.SendBufI((uint8_t*)dummy, (16*2));
-    UsbAu.SendBufI((uint8_t*)PRead, (PCM_BUF_CNT*2));
+    // == Send data to USB ==
+    // Copy data to buffer-to-send
+    for(uint32_t i=0; i<PCM_USB_BUF_CNT; i++) {
+        BufToSend[i] = PRead[i*2];
+    }
+    UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
 }
 
 void PCM1865_t::Init() {
@@ -99,13 +92,15 @@ void PCM1865_t::Init() {
     PCM_I2S->CR2 = SPI_CR2_RXDMAEN;
     PCM_I2S->I2SCFGR = 0;  // Disable I2S
     // Mode=I2S, Master Receive, PcmSync not needed, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
-    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
+//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
+    // Mode=I2S, Master Receive, PcmSync=short, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
+    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_MSB;
     PCM_I2S->I2SPR = SPI_I2SPR_MCKOE | (1 << 8) | (uint16_t)12;    // 8000
     PCM_I2S->I2SCFGR |= SPI_I2SCFGR_I2SE;
     // ==== DMA ====
     dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
     dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_I2S->DR);
-    dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, IRxBuf);
     dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
     dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
     dmaStreamEnable       (PCM_DMA_STREAM);
@@ -123,10 +118,15 @@ void PCM1865_t::Init() {
     WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
     WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
-    // Formats
-    WriteReg(0x0B, 0b11001101); // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=Left Justified (==MSB justified in ST terms)
+    // == Formats ==
+    // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=Left Justified (==MSB justified in ST terms)
+    WriteReg(0x0B, 0b11001101);
+    // RX_WLEN=16bit (not used), LRCK duty=1/256, TX_WLEN=16bit, FMT=TDM
+//    WriteReg(0x0B, 0b11011111);
 //    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
     WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
+    WriteReg(0x0D, 0x00);   // TX TDM Offset: 0
+
 
     EnterRunMode();
 
