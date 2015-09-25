@@ -22,21 +22,27 @@
                             STM32_DMA_CR_CIRC         /* Circular buffer enable */
 
 // 8 samples per ms => 16 samples per two ms;
-#define SAMPLES_PER_MS      8   // for 8kHz sampling freq
+#define USB_SAMPLES_PER_MS  8   // for 8kHz sampling freq
+#define PCM_SAMPLES_PER_MS  16  // for 16kHz sampling freq
 #define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
 #define SAMPLE_SZ           2   // 16bit == 2bytes
-#define PCM_USB_BUF_CNT     (SAMPLES_PER_MS * SENDING_PERIOD)
-#define PCM_BUF_CNT         (SAMPLES_PER_MS * SENDING_PERIOD * 2)   // Two channels
+#define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)
+#define PCM_BUF_CNT         (PCM_SAMPLES_PER_MS * SENDING_PERIOD * 2)   // Two channels
 
 
 enum PcmAdcChnls_t {pacADC1L = 0x01, pacADC1R = 0x02, pacADC2L = 0x03, pacADC2R = 0x04};
+
+struct Pair_t {
+    int16_t One, Two;
+} __attribute__ ((packed));
 
 class PCM1865_t {
 private:
     Spi_t ISpi;
     PinOutput_t CS{PCM_CS_GPIO, PCM_CS_PIN, omPushPull};
-    int16_t IRxBuf[2][PCM_BUF_CNT], *PWrite, *PRead;
-    int16_t BufToSend[PCM_USB_BUF_CNT];
+    Pair_t Pair[2], *PWrite = &Pair[0], *PRead = &Pair[1];
+    int16_t IRxBuf[2][PCM_BUF_CNT];
+    int16_t BufToSend[PCM_USB_BUF_CNT], Indx=0;
     void WriteReg(uint8_t Addr, uint8_t Value);
     uint8_t ReadReg(uint8_t Addr);
     // Commands

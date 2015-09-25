@@ -38,31 +38,39 @@ void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 void PCM1865_t::IRQDmaRxHandler() {
     dmaStreamDisable(PCM_DMA_STREAM);
     // Switch buffers
-    if(PWrite == &IRxBuf[0][0]) {
-        PWrite = &IRxBuf[1][0];
-        PRead = &IRxBuf[0][0];
+//    if(PWrite == &IRxBuf[0][0]) {
+//        PWrite = &IRxBuf[1][0];
+//        PRead = &IRxBuf[0][0];
+//    }
+//    else {
+//        PWrite = &IRxBuf[0][0];
+//        PRead = &IRxBuf[1][0];
+//    }
+    if(PWrite == &Pair[0]) {
+        PWrite = &Pair[1];
+        PRead  = &Pair[0];
     }
     else {
-        PWrite = &IRxBuf[0][0];
-        PRead = &IRxBuf[1][0];
+        PWrite = &Pair[0];
+        PRead  = &Pair[1];
     }
-
     dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
-    dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
+    dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
     dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
     dmaStreamEnable       (PCM_DMA_STREAM);
     // == Send data to USB ==
     // Copy data to buffer-to-send
-    for(uint32_t i=0; i<PCM_USB_BUF_CNT; i++) {
-        BufToSend[i] = PRead[i*2];
+    BufToSend[Indx++] = PRead->One;
+    if(Indx >= PCM_USB_BUF_CNT) {
+        Indx = 0;
+        UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
     }
-    UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
 }
 
 void PCM1865_t::Init() {
     // Variables
-    PWrite = &IRxBuf[0][0];
-    PRead  = &IRxBuf[1][0];
+//    PWrite = &IRxBuf[0][0];
+//    PRead  = &IRxBuf[1][0];
     // ==== Control SPI ====
     CS.Init();
     CS.SetHi();
@@ -86,24 +94,17 @@ void PCM1865_t::Init() {
     PCM_I2S_RccEnable();
     // I2S Clk
     RCC->CFGR &= ~RCC_CFGR_I2SSRC;  // Disable external clock
-    Clk.SetupI2SClk(128, 5);        // I2S PLL Divider
+    Clk.SetupI2SClk(256, 5);        // I2S PLL Divider
     // I2S
     PCM_I2S->CR1 = 0;
     PCM_I2S->CR2 = SPI_CR2_RXDMAEN;
     PCM_I2S->I2SCFGR = 0;  // Disable I2S
     // Mode=I2S, Master Receive, PcmSync not needed, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
-//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
+    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
     // Mode=I2S, Master Receive, PcmSync=short, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
-    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_MSB;
+//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_PCM | (0b10 << 1);
     PCM_I2S->I2SPR = SPI_I2SPR_MCKOE | (1 << 8) | (uint16_t)12;    // 8000
     PCM_I2S->I2SCFGR |= SPI_I2SCFGR_I2SE;
-    // ==== DMA ====
-    dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
-    dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_I2S->DR);
-    dmaStreamSetMemory0   (PCM_DMA_STREAM, IRxBuf);
-    dmaStreamSetTransactionSize(PCM_DMA_STREAM, PCM_BUF_CNT);
-    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
-    dmaStreamEnable       (PCM_DMA_STREAM);
 
     chThdSleepMilliseconds(9);  // Let clocks to stabilize
 
@@ -120,7 +121,9 @@ void PCM1865_t::Init() {
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
     // == Formats ==
     // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=Left Justified (==MSB justified in ST terms)
-    WriteReg(0x0B, 0b11001101);
+//    WriteReg(0x0B, 0b11001101);
+    // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=I2S
+    WriteReg(0x0B, 0b11001100);
     // RX_WLEN=16bit (not used), LRCK duty=1/256, TX_WLEN=16bit, FMT=TDM
 //    WriteReg(0x0B, 0b11011111);
 //    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
@@ -129,7 +132,16 @@ void PCM1865_t::Init() {
 
 
     EnterRunMode();
+    chThdSleepMilliseconds(360);
+    PrintState();
 
+    // ==== DMA ====
+    dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
+    dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_I2S->DR);
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
+    dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
+    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
+    dmaStreamEnable       (PCM_DMA_STREAM);
 }
 
 void PCM1865_t::WriteReg(uint8_t Addr, uint8_t Value) {
