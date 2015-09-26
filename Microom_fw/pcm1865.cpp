@@ -29,6 +29,8 @@
 #define I2SSTD_LSB      SPI_I2SCFGR_I2SSTD_1
 #define I2SSTD_PCM      (SPI_I2SCFGR_I2SSTD_0 | SPI_I2SCFGR_I2SSTD_1)
 
+PinOutputPWM_t<7, invNotInverted, omPushPull> TmrClk {GPIOC, 6, TIM3, 1};
+
 // Wrapper for DMA TX IRQ
 extern "C" {
 void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
@@ -38,39 +40,48 @@ void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 void PCM1865_t::IRQDmaRxHandler() {
     dmaStreamDisable(PCM_DMA_STREAM);
     // Switch buffers
-//    if(PWrite == &IRxBuf[0][0]) {
-//        PWrite = &IRxBuf[1][0];
-//        PRead = &IRxBuf[0][0];
-//    }
-//    else {
-//        PWrite = &IRxBuf[0][0];
-//        PRead = &IRxBuf[1][0];
-//    }
-    if(PWrite == &Pair[0]) {
-        PWrite = &Pair[1];
-        PRead  = &Pair[0];
-    }
-    else {
-        PWrite = &Pair[0];
-        PRead  = &Pair[1];
-    }
-    dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
+    IndxCh += 2; // Two channels at a time
+    if(IndxCh >= PCM_CH_CNT) IndxCh = 0;
+
+    // Switch mic pair
+//    switch(IndxCh) {
+//        case 2:
+//            WriteReg(0x06, 0x02);   // ADC1L = VinL2(SE)
+//            WriteReg(0x07, 0x02);   // ADC1R = VinR2(SE)
+//            break;
+//        case 4:
+//            WriteReg(0x06, 0x04);   // ADC1L = VinL3(SE)
+//            WriteReg(0x07, 0x04);   // ADC1R = VinR3(SE)
+//            break;
+//        case 6:
+//            WriteReg(0x06, 0x08);   // ADC1L = VinL4(SE)
+//            WriteReg(0x07, 0x08);   // ADC1R = VinR4(SE)
+//            break;
+//        default: // 0
+//            WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
+//            WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
+//            break;
+//    } // switch
+
+    // == Send data to USB ==
+    if(IndxCh == 0) { // New cycle just have started
+        // Copy data to buffer-to-send
+        BufToSend[IndxToSend++] = IChannels[2];
+        if(IndxToSend >= PCM_USB_BUF_CNT) {
+            IndxToSend = 0;
+            UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
+        }
+    } // if new cycle
+
+    // Start DMA
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, &IChannels[IndxCh]);
     dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
     dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
     dmaStreamEnable       (PCM_DMA_STREAM);
-    // == Send data to USB ==
-    // Copy data to buffer-to-send
-    BufToSend[Indx++] = PRead->One;
-    if(Indx >= PCM_USB_BUF_CNT) {
-        Indx = 0;
-        UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
-    }
 }
 
 void PCM1865_t::Init() {
     // Variables
-//    PWrite = &IRxBuf[0][0];
-//    PRead  = &IRxBuf[1][0];
     // ==== Control SPI ====
     CS.Init();
     CS.SetHi();
@@ -79,32 +90,35 @@ void PCM1865_t::Init() {
     PinSetupAlterFunc(PCM_SPI_GPIO, PCM_MISO, omPushPull, pudNone, PCM_SPI_AF);
     PinSetupAlterFunc(PCM_SPI_GPIO, PCM_MOSI, omPushPull, pudNone, PCM_SPI_AF);
     // ==== Control SPI ==== MSB first, master, ClkLowIdle, FirstEdge, Baudrate=32/4=8MHz
-    ISpi.Setup(PCM_SPI, boMSB, cpolIdleLow, cphaSecondEdge, sbFdiv4);
+    ISpi.Setup(PCM_SPI, boMSB, cpolIdleLow, cphaSecondEdge, sbFdiv8);
     ISpi.Enable();
 
     EnterPowerdownMode();
 
     // ==== I2S ====
     // GPIO
-    PinSetupAlterFunc(GPIOC, 6,  omPushPull, pudNone, AF5);  // I2S2 MCK
-    PinSetupAlterFunc(GPIOB, 12, omPushPull, pudNone, AF5);  // I2S2_WS LRClk1
-    PinSetupAlterFunc(GPIOB, 13, omPushPull, pudNone, AF5);  // I2S2_CK BitClk1
-    PinSetupAlterFunc(GPIOB, 15, omPushPull, pudNone, AF5);  // I2S2_SD DataOut1
+//    PinSetupAlterFunc(GPIOC, 6,  omPushPull, pudNone, AF5);  // I2S2 MCK
+//    PinSetupAlterFunc(GPIOB, 12, omPushPull, pudNone, AF5);  // I2S2_WS LRClk1
+//    PinSetupAlterFunc(GPIOB, 13, omPushPull, pudNone, AF5);  // I2S2_CK BitClk1
+//    PinSetupAlterFunc(GPIOB, 15, omPushPull, pudNone, AF5);  // I2S2_SD DataOut1
 
-    PCM_I2S_RccEnable();
+//    PCM_I2S_RccEnable();
     // I2S Clk
-    RCC->CFGR &= ~RCC_CFGR_I2SSRC;  // Disable external clock
-    Clk.SetupI2SClk(256, 5);        // I2S PLL Divider
+//    RCC->CFGR &= ~RCC_CFGR_I2SSRC;  // Disable external clock
+//    Clk.SetupI2SClk(256, 5);        // I2S PLL Divider
     // I2S
-    PCM_I2S->CR1 = 0;
-    PCM_I2S->CR2 = SPI_CR2_RXDMAEN;
-    PCM_I2S->I2SCFGR = 0;  // Disable I2S
+//    PCM_I2S->CR1 = 0;
+//    PCM_I2S->CR2 = SPI_CR2_RXDMAEN;
+//    PCM_I2S->I2SCFGR = 0;  // Disable I2S
     // Mode=I2S, Master Receive, PcmSync not needed, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
-    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
-    // Mode=I2S, Master Receive, PcmSync=short, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
-//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_PCM | (0b10 << 1);
-    PCM_I2S->I2SPR = SPI_I2SPR_MCKOE | (1 << 8) | (uint16_t)12;    // 8000
-    PCM_I2S->I2SCFGR |= SPI_I2SCFGR_I2SE;
+//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
+    // Mode=I2S, Master Receive, PcmSync=short, I2SSTD=PCM, CkPol=Low, DatLen=16bit, ChLen=16bit
+//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_PCM | (0b10 << 1) | 1;
+//    PCM_I2S->I2SPR = SPI_I2SPR_MCKOE | (1 << 8) | (uint16_t)12;
+//    PCM_I2S->I2SCFGR |= SPI_I2SCFGR_I2SE;
+
+    TmrClk.Init();
+    TmrClk.Set(3);
 
     chThdSleepMilliseconds(9);  // Let clocks to stabilize
 
@@ -112,33 +126,94 @@ void PCM1865_t::Init() {
     ResetRegs();
     SelectPage(0);
 
+    // Clocks
+    WriteReg(0x28, 0x00);   // PLL disabled
+
+    //WriteReg(0x20, 0b01011110); // SCK, Master, All connected to PLL, Clk detector disabled
+//    WriteReg(0x20, 0b01010010); // SCK, Master, All connected to SCK, Clk detector disabled
+//    WriteReg(0x20, 0b00010001); // Master, Clk detector enabled
+//    WriteReg(0x20, 0b00110001); // Master, use PLL, Clk detector enabled
+    WriteReg(0x20, 0b00110000); // Master, use PLL, All use SCK, Clk detector disabled
+//    WriteReg(0x20, 0b00000001); // Slave, Clk detector enabled
+
+    // PLL coeffs
+    WriteReg(0x29, 0);   // PLL P-divider
+    WriteReg(0x2A, 0);   // PLL R-divider
+    WriteReg(0x2B, 12);  // PLL J-part
+    WriteReg(0x2C, 0);   // PLL D-LSB
+    WriteReg(0x2D, 0);   // PLL D-MSB
+
+    // DSP1, DSP2, ADC dividers
+    WriteReg(0x21, 1);   // DSP1 Clock Divider Value
+    WriteReg(0x22, 1);   // DSP2 Clock Divider Value
+    WriteReg(0x23, 3);   // ADC Clock Divider Value
+
+    // BCK & LRCK dividers
+    WriteReg(0x25, 7);   // 1/8 PLL SCK Clock Divider value
+    WriteReg(0x26, 3);   // 1/4 Master Clock (SCK) Divider value
+    WriteReg(0x27, 63);  // Master SCK Clock Divider value
+
+    WriteReg(0x28, 0x01);   // PLL enabled, src is SCK
+
+    // == Main part ====
     WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
     // Main ADC Channel selection (everywhere signal is not inverted)
     WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
     WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
     WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
     WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
+//    WriteReg(0x08, 0x00);   // ADC2L = No Select
+//    WriteReg(0x09, 0x00);   // ADC2R = No Select
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
+
     // == Formats ==
     // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=Left Justified (==MSB justified in ST terms)
 //    WriteReg(0x0B, 0b11001101);
     // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=I2S
-    WriteReg(0x0B, 0b11001100);
+//    WriteReg(0x0B, 0b11001100);
     // RX_WLEN=16bit (not used), LRCK duty=1/256, TX_WLEN=16bit, FMT=TDM
 //    WriteReg(0x0B, 0b11011111);
-//    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
-    WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
+    WriteReg(0x0B, 0b11001111);
+    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
+//    WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
     WriteReg(0x0D, 0x00);   // TX TDM Offset: 0
 
-
     EnterRunMode();
-    chThdSleepMilliseconds(360);
+    chThdSleepMilliseconds(450);
     PrintState();
+
+    uint8_t b;
+    b = ReadReg(0x20);
+    Uart.Printf("\r 0x20: %X", b);
+    b = ReadReg(0x21);
+    Uart.Printf("\r 0x21: %u", b);
+    b = ReadReg(0x22);
+    Uart.Printf("\r 0x22: %u", b);
+    b = ReadReg(0x23);
+    Uart.Printf("\r 0x23: %u", b);
+    b = ReadReg(0x25);
+    Uart.Printf("\r 0x25: %u", b);
+    b = ReadReg(0x26);
+    Uart.Printf("\r 0x26: %u", b);
+    b = ReadReg(0x27);
+    Uart.Printf("\r 0x27: %u", b);
+    b = ReadReg(0x28);
+    Uart.Printf("\r 0x28: %X", b);
+    b = ReadReg(0x29);
+    Uart.Printf("\r 0x29: %u", b);
+    b = ReadReg(0x2A);
+    Uart.Printf("\r 0x2A: %u", b);
+    b = ReadReg(0x2B);
+    Uart.Printf("\r 0x2B: %u", b);
+    b = ReadReg(0x2C);
+    Uart.Printf("\r 0x2C: %u", b);
+    b = ReadReg(0x2D);
+    Uart.Printf("\r 0x2D: %u", b);
 
     // ==== DMA ====
     dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
     dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_I2S->DR);
-    dmaStreamSetMemory0   (PCM_DMA_STREAM, PWrite);
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, IChannels);
     dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
     dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
     dmaStreamEnable       (PCM_DMA_STREAM);
@@ -151,6 +226,10 @@ void PCM1865_t::WriteReg(uint8_t Addr, uint8_t Value) {
     ISpi.ReadWriteByte(Addr);
     ISpi.ReadWriteByte(Value);
     CS.SetHi();
+    __NOP();
+    __NOP();
+    __NOP();
+    __NOP();
 }
 
 uint8_t PCM1865_t::ReadReg(uint8_t Addr) {
