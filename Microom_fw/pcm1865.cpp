@@ -132,26 +132,27 @@ void PCM1865_t::Init() {
     //WriteReg(0x20, 0b01011110); // SCK, Master, All connected to PLL, Clk detector disabled
 //    WriteReg(0x20, 0b01010010); // SCK, Master, All connected to SCK, Clk detector disabled
 //    WriteReg(0x20, 0b00010001); // Master, Clk detector enabled
-//    WriteReg(0x20, 0b00110001); // Master, use PLL, Clk detector enabled
-    WriteReg(0x20, 0b00110000); // Master, use PLL, All use SCK, Clk detector disabled
+//    WriteReg(0x20, 0b00110000); // Master, use PLL, All use SCK, Clk detector disabled
+    WriteReg(0x20, 0b00111110); // Master, use PLL, All use PLL, Clk detector disabled
+//    WriteReg(0x20, 0b00110001); // Master, use PLL for BCK/LRCK, All use SCK, Clk detector enabled
 //    WriteReg(0x20, 0b00000001); // Slave, Clk detector enabled
 
     // PLL coeffs
     WriteReg(0x29, 0);   // PLL P-divider
     WriteReg(0x2A, 0);   // PLL R-divider
-    WriteReg(0x2B, 12);  // PLL J-part
-    WriteReg(0x2C, 0);   // PLL D-LSB
+    WriteReg(0x2B, 8);  // PLL J-part
+    WriteReg(0x2C, 192);   // PLL D-LSB
     WriteReg(0x2D, 0);   // PLL D-MSB
 
     // DSP1, DSP2, ADC dividers
-    WriteReg(0x21, 1);   // DSP1 Clock Divider Value
-    WriteReg(0x22, 1);   // DSP2 Clock Divider Value
-    WriteReg(0x23, 3);   // ADC Clock Divider Value
+    WriteReg(0x21, 7);   // DSP1 Clock Divider Value
+    WriteReg(0x22, 15);   // DSP2 Clock Divider Value
+    WriteReg(0x23, 31);   // ADC Clock Divider Value
 
     // BCK & LRCK dividers
-    WriteReg(0x25, 7);   // 1/8 PLL SCK Clock Divider value
-    WriteReg(0x26, 3);   // 1/4 Master Clock (SCK) Divider value
-    WriteReg(0x27, 63);  // Master SCK Clock Divider value
+    WriteReg(0x25, 7);   // PLL SCK Clock Divider value
+    WriteReg(0x26, 1);   // Master Clock (SCK) Divider value
+    WriteReg(0x27, 255);  // Master SCK Clock Divider value
 
     WriteReg(0x28, 0x01);   // PLL enabled, src is SCK
 
@@ -171,12 +172,11 @@ void PCM1865_t::Init() {
 //    WriteReg(0x0B, 0b11001101);
     // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=I2S
 //    WriteReg(0x0B, 0b11001100);
-    // RX_WLEN=16bit (not used), LRCK duty=1/256, TX_WLEN=16bit, FMT=TDM
-//    WriteReg(0x0B, 0b11011111);
+    // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=TDM
     WriteReg(0x0B, 0b11001111);
-    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
-//    WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
-    WriteReg(0x0D, 0x00);   // TX TDM Offset: 0
+//    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
+    WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
+//    WriteReg(0x0D, 0x00);   // TX TDM Offset: 0
 
     EnterRunMode();
     chThdSleepMilliseconds(450);

@@ -45,8 +45,8 @@ int main(void) {
     Pcm.Init();
 
     // ==== USB ====
-    UsbAu.Init();
-    UsbAu.Connect();
+//    UsbAu.Init();
+//    UsbAu.Connect();
 
     // Main cycle
     App.ITask();
