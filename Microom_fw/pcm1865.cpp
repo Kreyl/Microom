@@ -130,14 +130,7 @@ void PCM1865_t::Init() {
 
     // Clocks
     WriteReg(0x28, 0x00);   // PLL disabled
-
-    //WriteReg(0x20, 0b01011110); // SCK, Master, All connected to PLL, Clk detector disabled
-//    WriteReg(0x20, 0b01010010); // SCK, Master, All connected to SCK, Clk detector disabled
-//    WriteReg(0x20, 0b00010001); // Master, Clk detector enabled
-//    WriteReg(0x20, 0b00110000); // Master, use PLL, All use SCK, Clk detector disabled
-    WriteReg(0x20, 0b00111110); // Master, use PLL, All use PLL, Clk detector disabled
-//    WriteReg(0x20, 0b00110001); // Master, use PLL for BCK/LRCK, All use SCK, Clk detector enabled
-//    WriteReg(0x20, 0b00000001); // Slave, Clk detector enabled
+    WriteReg(0x20, 0b00111110); // Master, use PLL for BCK/LRCK, All use PLL, Clk detector disabled
 
     // PLL coeffs
     WriteReg(0x29, 0);      // PLL P = 1
@@ -147,70 +140,36 @@ void PCM1865_t::Init() {
     WriteReg(0x2C, 0x80);   // PLL D-LSB  }
 
     // DSP1, DSP2, ADC dividers
-    WriteReg(0x21, 7);    // DSP1 Clock Divider Value
-    WriteReg(0x22, 15);   // DSP2 Clock Divider Value
-    WriteReg(0x23, 31);   // ADC Clock Divider Value
+    WriteReg(0x21, 7);      // DSP1 Clock Divider = 8
+    WriteReg(0x22, 15);     // DSP2 Clock Divider = 16
+    WriteReg(0x23, 31);     // ADC Clock Divider = 32
 
     // BCK & LRCK dividers
-    WriteReg(0x25, 7);   // PLL SCK Clock Divider value
-    WriteReg(0x26, 1);   // Master Clock (SCK) Divider value
-    WriteReg(0x27, 255);  // Master SCK Clock Divider value
+    WriteReg(0x25, 7);      // PLL SCK Clock Divider = 8
+    WriteReg(0x26, 1);      // Master Clock (SCK) Divider = 2
+    WriteReg(0x27, 255);    // Master SCK Clock Divider = 256
 
     WriteReg(0x28, 0x01);   // PLL enabled, src is SCK
 
-    // == Main part ====
+    // Common settings
     WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
-    // Main ADC Channel selection (everywhere signal is not inverted)
+    // ADC Channel selection (everywhere signal is not inverted)
     WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
     WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
     WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
     WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
-//    WriteReg(0x08, 0x00);   // ADC2L = No Select
-//    WriteReg(0x09, 0x00);   // ADC2R = No Select
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
 
-    // == Formats ==
-    // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=Left Justified (==MSB justified in ST terms)
-//    WriteReg(0x0B, 0b11001101);
-    // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=I2S
-//    WriteReg(0x0B, 0b11001100);
+    // == Data Format ==
     // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=TDM
     WriteReg(0x0B, 0b11001111);
     WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
 //    WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
-//    WriteReg(0x0D, 0x00);   // TX TDM Offset: 0
+    WriteReg(0x0D, 128);   // TX TDM Offset: 128 to move data to falling edge
 
     EnterRunMode();
     chThdSleepMilliseconds(450);
     PrintState();
-
-    uint8_t b;
-    b = ReadReg(0x20);
-    Uart.Printf("\r 0x20: %X", b);
-    b = ReadReg(0x21);
-    Uart.Printf("\r 0x21: %u", b);
-    b = ReadReg(0x22);
-    Uart.Printf("\r 0x22: %u", b);
-    b = ReadReg(0x23);
-    Uart.Printf("\r 0x23: %u", b);
-    b = ReadReg(0x25);
-    Uart.Printf("\r 0x25: %u", b);
-    b = ReadReg(0x26);
-    Uart.Printf("\r 0x26: %u", b);
-    b = ReadReg(0x27);
-    Uart.Printf("\r 0x27: %u", b);
-    b = ReadReg(0x28);
-    Uart.Printf("\r 0x28: %X", b);
-    b = ReadReg(0x29);
-    Uart.Printf("\r 0x29: %u", b);
-    b = ReadReg(0x2A);
-    Uart.Printf("\r 0x2A: %u", b);
-    b = ReadReg(0x2B);
-    Uart.Printf("\r 0x2B: %u", b);
-    b = ReadReg(0x2C);
-    Uart.Printf("\r 0x2C: %u", b);
-    b = ReadReg(0x2D);
-    Uart.Printf("\r 0x2D: %u", b);
 
     // ==== DMA ====
     dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
@@ -314,6 +273,35 @@ void PCM1865_t::PrintState() {
     else Uart.Printf("\r  LDO  Failure");
 }
 
+void PCM1865_t::PrintClkRegs() {
+    uint8_t b;
+    b = ReadReg(0x20);
+    Uart.Printf("\r 0x20: %X", b);
+    b = ReadReg(0x21);
+    Uart.Printf("\r 0x21: %u", b);
+    b = ReadReg(0x22);
+    Uart.Printf("\r 0x22: %u", b);
+    b = ReadReg(0x23);
+    Uart.Printf("\r 0x23: %u", b);
+    b = ReadReg(0x25);
+    Uart.Printf("\r 0x25: %u", b);
+    b = ReadReg(0x26);
+    Uart.Printf("\r 0x26: %u", b);
+    b = ReadReg(0x27);
+    Uart.Printf("\r 0x27: %u", b);
+    b = ReadReg(0x28);
+    Uart.Printf("\r 0x28: %X", b);
+    b = ReadReg(0x29);
+    Uart.Printf("\r 0x29: %u", b);
+    b = ReadReg(0x2A);
+    Uart.Printf("\r 0x2A: %u", b);
+    b = ReadReg(0x2B);
+    Uart.Printf("\r 0x2B: %u", b);
+    b = ReadReg(0x2C);
+    Uart.Printf("\r 0x2C: %u", b);
+    b = ReadReg(0x2D);
+    Uart.Printf("\r 0x2D: %u", b);
+}
 
 #define Addr    0x02
 void PCM1865_t::SetGain(PcmAdcChnls_t Chnl, int8_t Gain_dB) {

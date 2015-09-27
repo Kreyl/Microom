@@ -46,6 +46,7 @@ private:
 public:
     void Init();
     void PrintState();
+    void PrintClkRegs();
     void EnterRunMode() { WriteReg(0x70, 0x70); }
     void EnterPowerdownMode() { WriteReg(0x70, 0x74); }
     void SetGain(PcmAdcChnls_t Chnl, int8_t Gain_dB);
