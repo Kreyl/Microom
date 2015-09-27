@@ -102,6 +102,8 @@ void PCM1865_t::Init() {
 //    PinSetupAlterFunc(GPIOB, 13, omPushPull, pudNone, AF5);  // I2S2_CK BitClk1
 //    PinSetupAlterFunc(GPIOB, 15, omPushPull, pudNone, AF5);  // I2S2_SD DataOut1
 
+    PinSetupIn(GPIOB, 15, pudPullDown);
+
 //    PCM_I2S_RccEnable();
     // I2S Clk
 //    RCC->CFGR &= ~RCC_CFGR_I2SSRC;  // Disable external clock
@@ -138,14 +140,14 @@ void PCM1865_t::Init() {
 //    WriteReg(0x20, 0b00000001); // Slave, Clk detector enabled
 
     // PLL coeffs
-    WriteReg(0x29, 0);   // PLL P-divider
-    WriteReg(0x2A, 0);   // PLL R-divider
-    WriteReg(0x2B, 8);  // PLL J-part
-    WriteReg(0x2D, 0x07);   // PLL D-MSB
-    WriteReg(0x2C, 0x80);   // PLL D-LSB
+    WriteReg(0x29, 0);      // PLL P = 1
+    WriteReg(0x2A, 0);      // PLL R = 1
+    WriteReg(0x2B, 8);      // PLL J-part }
+    WriteReg(0x2D, 0x07);   // PLL D-MSB  } K = 8.192
+    WriteReg(0x2C, 0x80);   // PLL D-LSB  }
 
     // DSP1, DSP2, ADC dividers
-    WriteReg(0x21, 7);   // DSP1 Clock Divider Value
+    WriteReg(0x21, 7);    // DSP1 Clock Divider Value
     WriteReg(0x22, 15);   // DSP2 Clock Divider Value
     WriteReg(0x23, 31);   // ADC Clock Divider Value
 
@@ -174,8 +176,8 @@ void PCM1865_t::Init() {
 //    WriteReg(0x0B, 0b11001100);
     // RX_WLEN=16bit (not used), LRCK duty=50%, TX_WLEN=16bit, FMT=TDM
     WriteReg(0x0B, 0b11001111);
-//    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
-    WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
+    WriteReg(0x0C, 0x01);   // TDM mode: 4 ch
+//    WriteReg(0x0C, 0x00);   // TDM mode: 2 ch
 //    WriteReg(0x0D, 0x00);   // TX TDM Offset: 0
 
     EnterRunMode();
