@@ -141,8 +141,8 @@ void PCM1865_t::Init() {
     WriteReg(0x29, 0);   // PLL P-divider
     WriteReg(0x2A, 0);   // PLL R-divider
     WriteReg(0x2B, 8);  // PLL J-part
-    WriteReg(0x2C, 192);   // PLL D-LSB
-    WriteReg(0x2D, 0);   // PLL D-MSB
+    WriteReg(0x2D, 0x07);   // PLL D-MSB
+    WriteReg(0x2C, 0x80);   // PLL D-LSB
 
     // DSP1, DSP2, ADC dividers
     WriteReg(0x21, 7);   // DSP1 Clock Divider Value
