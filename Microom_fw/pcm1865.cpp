@@ -44,7 +44,7 @@
 #define REG_ADC2R       0x09
 
 
-PinOutputPWM_t<7, invNotInverted, omPushPull> TmrClk {GPIOC, 6, TIM3, 1};
+PinOutputPWM_t<15, invNotInverted, omPushPull> TmrClk {GPIOC, 6, TIM3, 1};
 
 // Wrapper for DMA TX IRQ
 extern "C" {
@@ -107,7 +107,7 @@ void PCM1865_t::Init() {
 
     // ==== Master clock generator (8 MHz) ====
     TmrClk.Init();
-    TmrClk.Set(3);
+    TmrClk.Set(7);
 
     chThdSleepMilliseconds(9);  // Let clocks to stabilize
 
