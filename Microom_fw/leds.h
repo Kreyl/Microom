@@ -11,7 +11,7 @@
 #include "board.h"
 #include "kl_lib.h"
 
-extern PinOutput_t Led[8], LedAux;
+extern PinOutput_t Led[9];  // LED[0] is Aux
 
 
 #endif /* LEDS_H_ */

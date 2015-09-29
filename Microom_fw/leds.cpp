@@ -7,7 +7,9 @@
 
 #include "leds.h"
 
-PinOutput_t Led[8] = {
+PinOutput_t Led[9] = {
+        {LEDAUX_GPIO, LEDAUX_PIN, omPushPull}, // Led[0] is AUX
+        // LED[n] located near Mic[n]
         {LED1_GPIO, LED1_PIN, omPushPull},
         {LED2_GPIO, LED2_PIN, omPushPull},
         {LED3_GPIO, LED3_PIN, omPushPull},
@@ -17,5 +19,3 @@ PinOutput_t Led[8] = {
         {LED7_GPIO, LED7_PIN, omPushPull},
         {LED8_GPIO, LED8_PIN, omPushPull},
 };
-
-PinOutput_t LedAux {LEDAUX_GPIO, LEDAUX_PIN, omPushPull};

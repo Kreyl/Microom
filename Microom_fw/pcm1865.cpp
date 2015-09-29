@@ -14,7 +14,6 @@
 
 /*
  * Fs = 8kHz
-  *
  */
 
 /* 8000 Hz sampling freq, 2 bytes per sample. One frame per millisecond
@@ -54,29 +53,8 @@ void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 
 // ==== TX DMA IRQ ====
 void PCM1865_t::IRQDmaRxHandler() {
-    Led[5].SetHi();
-    // Copy data
-//////        ICh32[0] = IRxBuf32[0];
-//////        ICh32[1] = IRxBuf32[1];
-////        // Switch mics
-//        MicGrp = mg4567;
-//        WriteReg(0x06, 0x04);   // ADC1L = VinL3(SE)
-//        WriteReg(0x07, 0x04);   // ADC1R = VinR3(SE)
-//        WriteReg(0x08, 0x08);   // ADC2L = VinL4(SE)
-//        WriteReg(0x09, 0x08);   // ADC2R = VinR4(SE)
-//    }
-//    else {
-////        // Copy data
-//////        ICh32[2] = IRxBuf32[0];
-//////        ICh32[3] = IRxBuf32[1];
-////        // Switch mics
-//        MicGrp = mg0123;
-//        WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
-//        WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
-//        WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
-//        WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
-//    }
-
+//    Led[5].SetHi();
+    App.ProcessValues(IRxBuf);
     // Process data at the beginning of new cycle (8 kHz)
 //    if(MicGrp == mg0123) {
 //        // Copy data to buffer-to-send
@@ -87,13 +65,7 @@ void PCM1865_t::IRQDmaRxHandler() {
 //        }
 //    } // if new cycle
 
-    // Start DMA
-//    dmaStreamSetMemory0   (PCM_DMA_STREAM, &IChannels[IndxCh]);
-//    dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
-//    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
-//    dmaStreamEnable       (PCM_DMA_STREAM);
-    Led[5].SetLo();
-//    PCM_DATA_SPI->CR1 |= SPI_CR1_SPE;
+//    Led[5].SetLo();
 }
 
 void PCM1865_t::Init() {
@@ -169,11 +141,8 @@ void PCM1865_t::Init() {
     // Common settings
 //    WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
     WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
-    // ADC Channel selection (everywhere signal is not inverted)
-    WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
-    WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
-    WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
-    WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
+    // ADC Channel selection
+    SelectMicGrp(mg1);
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
 
     // == Data Format ==
@@ -188,18 +157,19 @@ void PCM1865_t::Init() {
     PrintState();
 }
 
+// ADC Channel selection (everywhere signal is not inverted)
 void PCM1865_t::SelectMicGrp(MicGroup_t Grp) {
     if(Grp == mg1) {    // 1, 4, 6, 7 == L1, R2, R3, L4 => L1,R2,L4,R3 => 1,4,7,6
-        WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
-        WriteReg(0x07, 0x02);   // ADC1R = VinR2(SE)
-        WriteReg(0x08, 0x08);   // ADC2L = VinL4(SE)
-        WriteReg(0x09, 0x08);   // ADC2R = VinR4(SE)
+        WriteReg(REG_ADC1L, IN_L1);
+        WriteReg(REG_ADC1R, IN_R2);
+        WriteReg(REG_ADC2L, IN_L4);
+        WriteReg(REG_ADC2R, IN_R3);
     }
-    else {  // 2, 3, 5, 8 == R1, L2, L3, R4
-        WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
-        WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
-        WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
-        WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
+    else {  // 2, 3, 5, 8 == R1, L2, L3, R4 => L2,R1,L3,R4
+        WriteReg(REG_ADC1L, IN_L2);
+        WriteReg(REG_ADC1R, IN_R1);
+        WriteReg(REG_ADC2L, IN_L3);
+        WriteReg(REG_ADC2R, IN_R4);
     }
 }
 
@@ -328,8 +298,8 @@ void PCM1865_t::SetGain(int8_t Gain_dB) {
 //    Uart.Printf("\rG=%X", Gain_dB);
 //    WriteReg((uint8_t)Chnl, (uint8_t)Gain_dB);
     WriteReg(0x01, Gain_dB);
-    chThdSleepMilliseconds(18);
-    uint8_t b = ReadReg(0x01);
+//    chThdSleepMilliseconds(18);
+//    uint8_t b = ReadReg(0x01);
 //    Uart.Printf("\rAfter: %X", b);
 }
 #endif

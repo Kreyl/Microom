@@ -17,10 +17,16 @@
 #define APP_NAME        "Microom"
 #define APP_VERSION     __DATE__ " " __TIME__
 
+#define CHNL_CNT        4 // 4 mics simultaneously
+
 class App_t {
 private:
     thread_t *PThread;
+    int16_t IChnl[CHNL_CNT];
+    int MaxLedIndx = 1;
+    LvlMtr_t LvlMtr[CHNL_CNT];
 public:
+    void ProcessValues(int16_t *Values);
     // Eternal methods
     void InitThread() { PThread = chThdGetSelfX(); }
     void SignalEvt(eventmask_t Evt) {

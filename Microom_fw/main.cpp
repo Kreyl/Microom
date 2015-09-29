@@ -12,6 +12,7 @@
 #include "pcm1865.h"
 #include "board.h"
 #include "leds.h"
+#include "filter.h"
 
 App_t App;
 PCM1865_t Pcm;
@@ -41,8 +42,12 @@ int main(void) {
 
     App.InitThread();
     // Leds
-    for(uint8_t i=0; i<8; i++) Led[i].Init();
-    LedAux.Init();
+    for(uint8_t i=0; i<9; i++) {
+        Led[i].Init();
+//        Led[i].SetHi();
+//        chThdSleepMilliseconds(270);
+//        Led[i].SetLo();
+    }
 
     // ==== USB ====
     UsbAu.Init();
@@ -61,11 +66,11 @@ void App_t::ITask() {
 #if 1 // ==== USB ====
         if(EvtMsk & EVTMSK_USB_READY) {
             Uart.Printf("\rUsbReady");
-            LedAux.SetHi();
+            Led[0].SetHi();
         }
         if(EvtMsk & EVTMSK_USB_SUSPEND) {
             Uart.Printf("\rUsbSuspend");
-            LedAux.SetLo();
+            Led[0].SetLo();
         }
 
         if(EvtMsk & EVTMSK_START_LISTEN) {
@@ -94,8 +99,8 @@ void App_t::OnUartCmd(Uart_t *PUart) {
     else if(PCmd->NameIs("PwrDwn")) Pcm.EnterPowerdownMode();
     else if(PCmd->NameIs("Run"))    Pcm.EnterRunMode();
 
-    else if(PCmd->NameIs("Grp1")) Pcm.SelectMicGrp(mg0123);
-    else if(PCmd->NameIs("Grp2")) Pcm.SelectMicGrp(mg4567);
+    else if(PCmd->NameIs("Grp1")) Pcm.SelectMicGrp(mg1);
+    else if(PCmd->NameIs("Grp2")) Pcm.SelectMicGrp(mg2);
 
     else if(PCmd->NameIs("Gain")) {
         if(PCmd->GetNextNumber(&dw32) != OK) { PUart->Ack(CMD_ERROR); return; }
@@ -136,4 +141,30 @@ void App_t::OnUartCmd(Uart_t *PUart) {
 
 #if 1 // ============================ LEDs =====================================
 
+#endif
+
+#if 1 // =========================== Filtering =================================
+// Mic indx to Led indx
+const int Mic2Led[4] = {1, 4, 7, 6};
+
+void App_t::ProcessValues(int16_t *Values) {
+    // Copy values to local array (and do not afraid of Values[0] being overwritten by DMA)
+    IChnl[0] = Values[0];   // Mic1
+    IChnl[1] = Values[1];   // Mic4
+    IChnl[2] = Values[2];   // Mic7
+    IChnl[3] = Values[3];   // Mic6
+    // Calculate level
+    Led[MaxLedIndx].SetLo();   // Switch off previous MaxLed
+    int32_t Max = 0, Indx = 0;
+    for(int i=0; i<CHNL_CNT; i++) {
+        int32_t Lvl = LvlMtr[i].AddXAndCalculate(IChnl[i]);
+        if(Max < Lvl) {
+            Max = Lvl;
+            Indx = i;
+        }
+    }
+    // Show loudest
+    MaxLedIndx = Mic2Led[Indx];
+    Led[MaxLedIndx].SetHi(); // Switch on new MaxLed
+}
 #endif

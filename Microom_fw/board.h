@@ -44,9 +44,6 @@
 #define LED8_GPIO       GPIOA
 #define LEDAUX_PIN      10
 #define LEDAUX_GPIO     GPIOB
-
-#define LED
-
 #endif
 
 #if 1 // =========================== SPI =======================================

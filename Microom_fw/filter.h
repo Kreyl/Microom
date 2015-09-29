@@ -317,5 +317,23 @@ public:
 };
 #endif
 
+#if 1 // ========================== Level meter ================================
+#define LVLMTR_BUF_SZ   8
+class LvlMtr_t : public Filter_t {
+private:
+    int32_t x[LVLMTR_BUF_SZ];
+public:
+    void Reset() { for(int i=0; i<LVLMTR_BUF_SZ; i++) x[i] = 0; }
+    int32_t AddXAndCalculate(int32_t x0) {
+        x[0] = ABS(x0);
+        int32_t y0 = x[0];
+        for(int i = (LVLMTR_BUF_SZ-1); i>=1; i--) {
+            y0 += x[i];
+            x[i] = x[i-1];
+        }
+        return (y0 / LVLMTR_BUF_SZ);
+    }
+};
+#endif
 
 #endif /* FILTER_H_ */
