@@ -25,12 +25,34 @@
 #define PCM_MOSI        7
 #define PCM_SPI_AF      AF5
 
+// LEDs
+#define LED1_PIN        2
+#define LED1_GPIO       GPIOB
+#define LED2_PIN        11
+#define LED2_GPIO       GPIOB
+#define LED3_PIN        1
+#define LED3_GPIO       GPIOC
+#define LED4_PIN        4
+#define LED4_GPIO       GPIOC
+#define LED5_PIN        8
+#define LED5_GPIO       GPIOB
+#define LED6_PIN        0
+#define LED6_GPIO       GPIOC
+#define LED7_PIN        9
+#define LED7_GPIO       GPIOB
+#define LED8_PIN        10
+#define LED8_GPIO       GPIOA
+#define LEDAUX_PIN      10
+#define LEDAUX_GPIO     GPIOB
+
+#define LED
+
 #endif
 
 #if 1 // =========================== SPI =======================================
-#define PCM_SPI         SPI1
-#define PCM_I2S         SPI2
-#define PCM_I2S_RccEnable() rccEnableSPI2(FALSE);
+#define PCM_CTRL_SPI    SPI1
+#define PCM_DATA_SPI    SPI2
+#define PCM_DATA_SPI_RccEnable() rccEnableSPI2(FALSE);
 
 #endif
 

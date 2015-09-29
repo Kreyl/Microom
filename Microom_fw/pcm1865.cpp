@@ -10,13 +10,12 @@
 #include "uart.h"
 #include "clocking.h"
 #include "usb_audio.h"
+#include "leds.h"
 
 /*
  * Fs = 8kHz
- * SCKI = Fs*256 (fixed) == 2048kHz (stm output)
- *
+  *
  */
-
 
 /* 8000 Hz sampling freq, 2 bytes per sample. One frame per millisecond
  * means 8 samples per frame, but every second IN packet is lost. Therefore,
@@ -29,6 +28,23 @@
 #define I2SSTD_LSB      SPI_I2SCFGR_I2SSTD_1
 #define I2SSTD_PCM      (SPI_I2SCFGR_I2SSTD_0 | SPI_I2SCFGR_I2SSTD_1)
 
+// Mic inputs
+#define IN_L1           0x01
+#define IN_L2           0x02
+#define IN_L3           0x04
+#define IN_L4           0x08
+#define IN_R1           0x01
+#define IN_R2           0x02
+#define IN_R3           0x04
+#define IN_R4           0x08
+
+// ADC channels
+#define REG_ADC1L       0x06
+#define REG_ADC1R       0x07
+#define REG_ADC2L       0x08
+#define REG_ADC2R       0x09
+
+
 PinOutputPWM_t<7, invNotInverted, omPushPull> TmrClk {GPIOC, 6, TIM3, 1};
 
 // Wrapper for DMA TX IRQ
@@ -38,46 +54,46 @@ void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 
 // ==== TX DMA IRQ ====
 void PCM1865_t::IRQDmaRxHandler() {
-    dmaStreamDisable(PCM_DMA_STREAM);
-    // Switch buffers
-    IndxCh += 2; // Two channels at a time
-    if(IndxCh >= PCM_CH_CNT) IndxCh = 0;
+    Led[5].SetHi();
+    // Copy data
+//////        ICh32[0] = IRxBuf32[0];
+//////        ICh32[1] = IRxBuf32[1];
+////        // Switch mics
+//        MicGrp = mg4567;
+//        WriteReg(0x06, 0x04);   // ADC1L = VinL3(SE)
+//        WriteReg(0x07, 0x04);   // ADC1R = VinR3(SE)
+//        WriteReg(0x08, 0x08);   // ADC2L = VinL4(SE)
+//        WriteReg(0x09, 0x08);   // ADC2R = VinR4(SE)
+//    }
+//    else {
+////        // Copy data
+//////        ICh32[2] = IRxBuf32[0];
+//////        ICh32[3] = IRxBuf32[1];
+////        // Switch mics
+//        MicGrp = mg0123;
+//        WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
+//        WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
+//        WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
+//        WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
+//    }
 
-    // Switch mic pair
-//    switch(IndxCh) {
-//        case 2:
-//            WriteReg(0x06, 0x02);   // ADC1L = VinL2(SE)
-//            WriteReg(0x07, 0x02);   // ADC1R = VinR2(SE)
-//            break;
-//        case 4:
-//            WriteReg(0x06, 0x04);   // ADC1L = VinL3(SE)
-//            WriteReg(0x07, 0x04);   // ADC1R = VinR3(SE)
-//            break;
-//        case 6:
-//            WriteReg(0x06, 0x08);   // ADC1L = VinL4(SE)
-//            WriteReg(0x07, 0x08);   // ADC1R = VinR4(SE)
-//            break;
-//        default: // 0
-//            WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
-//            WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
-//            break;
-//    } // switch
-
-    // == Send data to USB ==
-    if(IndxCh == 0) { // New cycle just have started
-        // Copy data to buffer-to-send
-        BufToSend[IndxToSend++] = IChannels[2];
-        if(IndxToSend >= PCM_USB_BUF_CNT) {
-            IndxToSend = 0;
-            UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
-        }
-    } // if new cycle
+    // Process data at the beginning of new cycle (8 kHz)
+//    if(MicGrp == mg0123) {
+//        // Copy data to buffer-to-send
+//        BufToSend[IndxToSend++] = IChannels[0];
+//        if(IndxToSend >= PCM_USB_BUF_CNT) {
+//            IndxToSend = 0;
+//            UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
+//        }
+//    } // if new cycle
 
     // Start DMA
-    dmaStreamSetMemory0   (PCM_DMA_STREAM, &IChannels[IndxCh]);
-    dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
-    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
-    dmaStreamEnable       (PCM_DMA_STREAM);
+//    dmaStreamSetMemory0   (PCM_DMA_STREAM, &IChannels[IndxCh]);
+//    dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
+//    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
+//    dmaStreamEnable       (PCM_DMA_STREAM);
+    Led[5].SetLo();
+//    PCM_DATA_SPI->CR1 |= SPI_CR1_SPE;
 }
 
 void PCM1865_t::Init() {
@@ -90,41 +106,40 @@ void PCM1865_t::Init() {
     PinSetupAlterFunc(PCM_SPI_GPIO, PCM_MISO, omPushPull, pudNone, PCM_SPI_AF);
     PinSetupAlterFunc(PCM_SPI_GPIO, PCM_MOSI, omPushPull, pudNone, PCM_SPI_AF);
     // ==== Control SPI ==== MSB first, master, ClkLowIdle, FirstEdge, Baudrate=32/4=8MHz
-    ISpi.Setup(PCM_SPI, boMSB, cpolIdleLow, cphaSecondEdge, sbFdiv8);
+    ISpi.Setup(PCM_CTRL_SPI, boMSB, cpolIdleLow, cphaSecondEdge, sbFdiv4);
     ISpi.Enable();
 
     EnterPowerdownMode();
 
-    // ==== I2S ====
+    // ==== Audio data input ====
     // GPIO
-//    PinSetupAlterFunc(GPIOC, 6,  omPushPull, pudNone, AF5);  // I2S2 MCK
-//    PinSetupAlterFunc(GPIOB, 12, omPushPull, pudNone, AF5);  // I2S2_WS LRClk1
-//    PinSetupAlterFunc(GPIOB, 13, omPushPull, pudNone, AF5);  // I2S2_CK BitClk1
-//    PinSetupAlterFunc(GPIOB, 15, omPushPull, pudNone, AF5);  // I2S2_SD DataOut1
+    PinSetupAlterFunc(GPIOB, 12, omPushPull, pudPullUp, AF5);   // NSS
+    PinSetupAlterFunc(GPIOB, 13, omPushPull, pudPullDown, AF5); // Clk
+    PinSetupAlterFunc(GPIOB, 15, omPushPull, pudPullDown, AF5); // MOSI
 
-    PinSetupIn(GPIOB, 15, pudPullDown);
+    // SPI
+    PCM_DATA_SPI_RccEnable();
+    // 16 bit, RX only, HW NSS, MSB, Slave, CPOL=0 (Clk Idle Low), CPHA=0 (First edge)
+    PCM_DATA_SPI->CR1 = SPI_CR1_DFF | SPI_CR1_RXONLY;
+    PCM_DATA_SPI->CR2 = SPI_CR2_RXDMAEN;
+    PCM_DATA_SPI->I2SCFGR = 0;  // Disable I2S
+    PCM_DATA_SPI->CR1 |= SPI_CR1_SPE;
 
-//    PCM_I2S_RccEnable();
-    // I2S Clk
-//    RCC->CFGR &= ~RCC_CFGR_I2SSRC;  // Disable external clock
-//    Clk.SetupI2SClk(256, 5);        // I2S PLL Divider
-    // I2S
-//    PCM_I2S->CR1 = 0;
-//    PCM_I2S->CR2 = SPI_CR2_RXDMAEN;
-//    PCM_I2S->I2SCFGR = 0;  // Disable I2S
-    // Mode=I2S, Master Receive, PcmSync not needed, I2SSTD=MSB, CkPol=Low, DatLen=16bit, ChLen=16bit
-//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_I2S;
-    // Mode=I2S, Master Receive, PcmSync=short, I2SSTD=PCM, CkPol=Low, DatLen=16bit, ChLen=16bit
-//    PCM_I2S->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG | I2SSTD_PCM | (0b10 << 1) | 1;
-//    PCM_I2S->I2SPR = SPI_I2SPR_MCKOE | (1 << 8) | (uint16_t)12;
-//    PCM_I2S->I2SCFGR |= SPI_I2SCFGR_I2SE;
+    // DMA
+    dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_MEDIUM, PcmRxIrq, NULL);
+    dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_DATA_SPI->DR);
+    dmaStreamSetMemory0   (PCM_DMA_STREAM, IRxBuf);
+    dmaStreamSetTransactionSize(PCM_DMA_STREAM, 8);
+    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
+    dmaStreamEnable       (PCM_DMA_STREAM);
 
+    // ==== Master clock generator (8 MHz) ====
     TmrClk.Init();
     TmrClk.Set(3);
 
     chThdSleepMilliseconds(9);  // Let clocks to stabilize
 
-    // ==== Setup regs ====
+    // ==== Setup PCM1865 regs ====
     ResetRegs();
     SelectPage(0);
 
@@ -152,7 +167,8 @@ void PCM1865_t::Init() {
     WriteReg(0x28, 0x01);   // PLL enabled, src is SCK
 
     // Common settings
-    WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
+//    WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
+    WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
     // ADC Channel selection (everywhere signal is not inverted)
     WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
     WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
@@ -170,14 +186,21 @@ void PCM1865_t::Init() {
     EnterRunMode();
     chThdSleepMilliseconds(450);
     PrintState();
+}
 
-    // ==== DMA ====
-    dmaStreamAllocate     (PCM_DMA_STREAM, IRQ_PRIO_LOW, PcmRxIrq, NULL);
-    dmaStreamSetPeripheral(PCM_DMA_STREAM, &PCM_I2S->DR);
-    dmaStreamSetMemory0   (PCM_DMA_STREAM, IChannels);
-    dmaStreamSetTransactionSize(PCM_DMA_STREAM, 2);
-    dmaStreamSetMode      (PCM_DMA_STREAM, PCM_DMA_RX_MODE);
-    dmaStreamEnable       (PCM_DMA_STREAM);
+void PCM1865_t::SelectMicGrp(MicGroup_t Grp) {
+    if(Grp == mg1) {    // 1, 4, 6, 7 == L1, R2, R3, L4 => L1,R2,L4,R3 => 1,4,7,6
+        WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
+        WriteReg(0x07, 0x02);   // ADC1R = VinR2(SE)
+        WriteReg(0x08, 0x08);   // ADC2L = VinL4(SE)
+        WriteReg(0x09, 0x08);   // ADC2R = VinR4(SE)
+    }
+    else {  // 2, 3, 5, 8 == R1, L2, L3, R4
+        WriteReg(0x06, 0x01);   // ADC1L = VinL1(SE)
+        WriteReg(0x07, 0x01);   // ADC1R = VinR1(SE)
+        WriteReg(0x08, 0x02);   // ADC2L = VinL2(SE)
+        WriteReg(0x09, 0x02);   // ADC2R = VinR2(SE)
+    }
 }
 
 void PCM1865_t::WriteReg(uint8_t Addr, uint8_t Value) {
@@ -187,10 +210,6 @@ void PCM1865_t::WriteReg(uint8_t Addr, uint8_t Value) {
     ISpi.ReadWriteByte(Addr);
     ISpi.ReadWriteByte(Value);
     CS.SetHi();
-    __NOP();
-    __NOP();
-    __NOP();
-    __NOP();
 }
 
 uint8_t PCM1865_t::ReadReg(uint8_t Addr) {
@@ -303,17 +322,14 @@ void PCM1865_t::PrintClkRegs() {
     Uart.Printf("\r 0x2D: %u", b);
 }
 
-#define Addr    0x02
-void PCM1865_t::SetGain(PcmAdcChnls_t Chnl, int8_t Gain_dB) {
+void PCM1865_t::SetGain(int8_t Gain_dB) {
     if(Gain_dB < -12 or Gain_dB > 40) return;
-
-    uint8_t b = ReadReg(Addr);
-    Uart.Printf("\rBefore: %X", b);
-
-//    Gain_dB *= 2;
+    Gain_dB *= 2;
+//    Uart.Printf("\rG=%X", Gain_dB);
 //    WriteReg((uint8_t)Chnl, (uint8_t)Gain_dB);
-    WriteReg(Addr, 5);
-    b = ReadReg(Addr);
-    Uart.Printf("\rAfter: %X", b);
+    WriteReg(0x01, Gain_dB);
+    chThdSleepMilliseconds(18);
+    uint8_t b = ReadReg(0x01);
+//    Uart.Printf("\rAfter: %X", b);
 }
 #endif

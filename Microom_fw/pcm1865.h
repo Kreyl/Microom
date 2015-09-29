@@ -23,20 +23,22 @@
 
 // 8 samples per ms => 16 samples per two ms;
 #define USB_SAMPLES_PER_MS  8   // for 8kHz sampling freq
-#define PCM_SAMPLES_PER_MS  16  // for 16kHz sampling freq
 #define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
 #define SAMPLE_SZ           2   // 16bit == 2bytes
 #define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)
-#define PCM_CH_CNT          2
-
+#define PCM_RX_CH_CNT       8   // 4 meaningful + 4 dummy due to PCM1865 TDM mode realization
+#define PCM_CH_CNT          8   // 8 mics
 
 enum PcmAdcChnls_t {pacADC1L = 0x01, pacADC1R = 0x02, pacADC2L = 0x03, pacADC2R = 0x04};
+enum MicGroup_t {mg1, mg2};
 
 class PCM1865_t {
 private:
     Spi_t ISpi;
     PinOutput_t CS{PCM_CS_GPIO, PCM_CS_PIN, omPushPull};
-    int16_t IChannels[PCM_CH_CNT], IndxCh = 0;
+    int16_t IRxBuf[PCM_RX_CH_CNT];
+    int16_t IChannels[PCM_CH_CNT];
+    MicGroup_t MicGrp;
     int16_t BufToSend[PCM_USB_BUF_CNT], IndxToSend=0;
     void WriteReg(uint8_t Addr, uint8_t Value);
     uint8_t ReadReg(uint8_t Addr);
@@ -45,11 +47,13 @@ private:
     void SelectPage(uint8_t Page) { WriteReg(0x00, Page); }
 public:
     void Init();
-    void PrintState();
-    void PrintClkRegs();
+    void SelectMicGrp(MicGroup_t Grp);
     void EnterRunMode() { WriteReg(0x70, 0x70); }
     void EnterPowerdownMode() { WriteReg(0x70, 0x74); }
-    void SetGain(PcmAdcChnls_t Chnl, int8_t Gain_dB);
+    void SetGain(int8_t Gain_dB);
+    // Debug
+    void PrintState();
+    void PrintClkRegs();
     // Inner use
     void IRQDmaRxHandler();
 };

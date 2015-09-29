@@ -11,6 +11,7 @@
 #include "chprintf.h"
 #include "pcm1865.h"
 #include "board.h"
+#include "leds.h"
 
 App_t App;
 PCM1865_t Pcm;
@@ -32,9 +33,6 @@ int main(void) {
     halInit();
     chSysInit();
 
-    PinSetupOut(GPIOB, 10, omPushPull, pudNone);
-    PinSetupOut(GPIOB, 8, omPushPull, pudNone);
-
     // ==== Init hardware ====
     Uart.Init(115200, UART_GPIO, UART_TX_PIN, UART_GPIO, UART_RX_PIN);
     Uart.Printf("\r%S %S", APP_NAME, APP_VERSION);
@@ -42,11 +40,15 @@ int main(void) {
     if(ClkResult != 0) Uart.Printf("\rXTAL failure");
 
     App.InitThread();
-    Pcm.Init();
+    // Leds
+    for(uint8_t i=0; i<8; i++) Led[i].Init();
+    LedAux.Init();
 
     // ==== USB ====
-//    UsbAu.Init();
-//    UsbAu.Connect();
+    UsbAu.Init();
+    UsbAu.Connect();
+
+    Pcm.Init();
 
     // Main cycle
     App.ITask();
@@ -59,11 +61,11 @@ void App_t::ITask() {
 #if 1 // ==== USB ====
         if(EvtMsk & EVTMSK_USB_READY) {
             Uart.Printf("\rUsbReady");
-            PinSet(GPIOB, 10);
+            LedAux.SetHi();
         }
         if(EvtMsk & EVTMSK_USB_SUSPEND) {
             Uart.Printf("\rUsbSuspend");
-            PinClear(GPIOB, 10);
+            LedAux.SetLo();
         }
 
         if(EvtMsk & EVTMSK_START_LISTEN) {
@@ -91,6 +93,14 @@ void App_t::OnUartCmd(Uart_t *PUart) {
     else if(PCmd->NameIs("State"))  Pcm.PrintState();
     else if(PCmd->NameIs("PwrDwn")) Pcm.EnterPowerdownMode();
     else if(PCmd->NameIs("Run"))    Pcm.EnterRunMode();
+
+    else if(PCmd->NameIs("Grp1")) Pcm.SelectMicGrp(mg0123);
+    else if(PCmd->NameIs("Grp2")) Pcm.SelectMicGrp(mg4567);
+
+    else if(PCmd->NameIs("Gain")) {
+        if(PCmd->GetNextNumber(&dw32) != OK) { PUart->Ack(CMD_ERROR); return; }
+        Pcm.SetGain((int8_t)dw32);
+    }
 
     else PUart->Ack(CMD_UNKNOWN);
 }
