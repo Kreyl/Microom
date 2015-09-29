@@ -318,20 +318,18 @@ public:
 #endif
 
 #if 1 // ========================== Level meter ================================
-#define LVLMTR_BUF_SZ   8
+#define LVLMTR_A1   ((float)0.01)   // }
+#define LVLMTR_B1   ((float)0.99)   // } Tau = 100 Ts
 class LvlMtr_t : public Filter_t {
 private:
-    int32_t x[LVLMTR_BUF_SZ];
+    float y1, x1;
 public:
-    void Reset() { for(int i=0; i<LVLMTR_BUF_SZ; i++) x[i] = 0; }
+    void Reset() { y1 = 0; }
     int32_t AddXAndCalculate(int32_t x0) {
-        x[0] = ABS(x0);
-        int32_t y0 = x[0];
-        for(int i = (LVLMTR_BUF_SZ-1); i>=1; i--) {
-            y0 += x[i];
-            x[i] = x[i-1];
-        }
-        return (y0 / LVLMTR_BUF_SZ);
+        float y0 = LVLMTR_A1 * x1 + LVLMTR_B1 * y1;
+        y1 = y0;
+        x1 = ABS(x0);
+        return roundf(y0);
     }
 };
 #endif
