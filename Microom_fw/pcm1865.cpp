@@ -55,16 +55,6 @@ void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 void PCM1865_t::IRQDmaRxHandler() {
 //    Led[5].SetHi();
     App.ProcessValues(IRxBuf);
-    // Process data at the beginning of new cycle (8 kHz)
-//    if(MicGrp == mg0123) {
-//        // Copy data to buffer-to-send
-//        BufToSend[IndxToSend++] = IChannels[0];
-//        if(IndxToSend >= PCM_USB_BUF_CNT) {
-//            IndxToSend = 0;
-//            UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
-//        }
-//    } // if new cycle
-
 //    Led[5].SetLo();
 }
 

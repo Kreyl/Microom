@@ -154,7 +154,6 @@ void App_t::ProcessValues(int16_t *Values) {
     IChnl[2] = Values[2];   // Mic7
     IChnl[3] = Values[3];   // Mic6
     // Calculate level
-    Led[MaxLedIndx].SetLo();   // Switch off previous MaxLed
     int32_t Max = 0, Indx = 0;
     for(int i=0; i<CHNL_CNT; i++) {
         int32_t Lvl = LvlMtr[i].AddXAndCalculate(IChnl[i]);
@@ -164,7 +163,14 @@ void App_t::ProcessValues(int16_t *Values) {
         }
     }
     // Show loudest
+    Led[MaxLedIndx].SetLo();   // Switch off previous MaxLed
     MaxLedIndx = Mic2Led[Indx];
     Led[MaxLedIndx].SetHi(); // Switch on new MaxLed
+    // Copy selected data to buffer-to-send and send to USB when needed
+    BufToSend[IndxToSend++] = IChnl[Indx];
+    if(IndxToSend >= PCM_USB_BUF_CNT) {
+        IndxToSend = 0;
+        UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
+    }
 }
 #endif

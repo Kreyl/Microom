@@ -14,10 +14,15 @@
 #include "evt_mask.h"
 #include "filter.h"
 
-#define APP_NAME        "Microom"
-#define APP_VERSION     __DATE__ " " __TIME__
+#define APP_NAME            "Microom"
+#define APP_VERSION         __DATE__ " " __TIME__
 
-#define CHNL_CNT        4 // 4 mics simultaneously
+#define CHNL_CNT            4 // 4 mics simultaneously
+
+// 8 samples per ms => 16 samples per two ms;
+#define USB_SAMPLES_PER_MS  8   // for 8kHz sampling freq
+#define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
+#define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)
 
 class App_t {
 private:
@@ -25,6 +30,7 @@ private:
     int16_t IChnl[CHNL_CNT];
     int MaxLedIndx = 1;
     LvlMtr_t LvlMtr[CHNL_CNT];
+    int16_t BufToSend[PCM_USB_BUF_CNT], IndxToSend=0;
 public:
     void ProcessValues(int16_t *Values);
     // Eternal methods

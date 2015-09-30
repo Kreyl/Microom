@@ -21,11 +21,7 @@
                             STM32_DMA_CR_TCIE    |    /* Enable Transmission Complete IRQ */ \
                             STM32_DMA_CR_CIRC         /* Circular buffer enable */
 
-// 8 samples per ms => 16 samples per two ms;
-#define USB_SAMPLES_PER_MS  8   // for 8kHz sampling freq
-#define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
 #define SAMPLE_SZ           2   // 16bit == 2bytes
-#define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)
 #define PCM_RX_CH_CNT       8   // 4 meaningful + 4 dummy due to PCM1865 TDM mode realization
 
 enum PcmAdcChnls_t {pacADC1L = 0x01, pacADC1R = 0x02, pacADC2L = 0x03, pacADC2R = 0x04};
@@ -36,7 +32,6 @@ private:
     Spi_t ISpi;
     PinOutput_t CS{PCM_CS_GPIO, PCM_CS_PIN, omPushPull};
     int16_t IRxBuf[PCM_RX_CH_CNT];
-    int16_t BufToSend[PCM_USB_BUF_CNT], IndxToSend=0;
     void WriteReg(uint8_t Addr, uint8_t Value);
     uint8_t ReadReg(uint8_t Addr);
     // Commands
