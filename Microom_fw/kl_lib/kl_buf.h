@@ -12,6 +12,8 @@
 #include "string.h" // for memcpy
 #include <kl_lib.h>
 
+enum AddRslt_t {addrOk, addrFail, addrSwitch};
+
 // Simple buffer
 struct Buf_t {
     uint8_t *Ptr;
@@ -160,6 +162,39 @@ public:
         else return Put(p);
     }
 };
+#endif
+
+#if 1 // ========================== Double buffer ==============================
+// Append to buf 1, until filled up. Switch buffers and return addrSwitch.
+template <typename T, uint32_t Sz>
+class DoubleBuf_t {
+private:
+    T Buf1[Sz], Buf2[Sz];
+    T *pWrite = Buf1;
+    T *pRead = Buf2;
+public:
+    AddRslt_t Append(T Value) {
+        *pWrite++ = Value;
+        if(pRead == Buf1) {             // Check if overflow
+            if(pWrite >= &Buf2[Sz]) {    // Switch buffers
+                pRead = Buf2;
+                pWrite = Buf1;
+                return addrSwitch;
+            }
+            else return addrOk;
+        }
+        else {  // pRead == Buf2
+            if(pWrite >= &Buf1[Sz]) {    // Switch buffers
+                pRead = Buf1;
+                pWrite = Buf2;
+                return addrSwitch;
+            }
+            else return addrOk;
+        }
+    }
+    T* GetBufToRead() { return pRead; }
+};
+
 #endif
 
 #if 1 // ========================= Counting buffer =============================

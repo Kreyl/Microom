@@ -61,6 +61,9 @@ int main(void) {
 
 __attribute__ ((__noreturn__))
 void App_t::ITask() {
+    // Filters init
+    for(int i=0; i<CHNL_CNT; i++) LvlMtr[i].Reset();
+
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
 #if 1 // ==== USB ====
@@ -102,9 +105,21 @@ void App_t::OnUartCmd(Uart_t *PUart) {
     else if(PCmd->NameIs("Grp1")) Pcm.SelectMicGrp(mg1);
     else if(PCmd->NameIs("Grp2")) Pcm.SelectMicGrp(mg2);
 
-    else if(PCmd->NameIs("Gain")) {
+    else if(PCmd->NameIs("SetGain")) {
         if(PCmd->GetNextNumber(&dw32) != OK) { PUart->Ack(CMD_ERROR); return; }
         Pcm.SetGain((int8_t)dw32);
+    }
+
+    else if(PCmd->NameIs("GetGain")) {
+        int8_t g;
+        g = Pcm.GetGain(1);
+        PUart->Printf("\rGain1 = %d", g);
+        g = Pcm.GetGain(2);
+        PUart->Printf("\rGain2 = %d", g);
+        g = Pcm.GetGain(3);
+        PUart->Printf("\rGain3 = %d", g);
+        g = Pcm.GetGain(4);
+        PUart->Printf("\rGain4 = %d", g);
     }
 
     else PUart->Ack(CMD_UNKNOWN);
@@ -139,16 +154,12 @@ void App_t::OnUartCmd(Uart_t *PUart) {
 //}
 #endif
 
-#if 1 // ============================ LEDs =====================================
-
-#endif
-
 #if 1 // =========================== Filtering =================================
 // Mic indx to Led indx
 const int Mic2Led[4] = {1, 4, 7, 6};
 
 void App_t::ProcessValues(int16_t *Values) {
-    // Copy values to local array (and do not afraid of Values[0] being overwritten by DMA)
+    // Copy values to local array (and do not afraid that Values[] will be overwritten by DMA)
     IChnl[0] = Values[0];   // Mic1
     IChnl[1] = Values[1];   // Mic4
     IChnl[2] = Values[2];   // Mic7
@@ -163,14 +174,13 @@ void App_t::ProcessValues(int16_t *Values) {
         }
     }
     // Show loudest
-    Led[MaxLedIndx].SetLo();   // Switch off previous MaxLed
+    Led[MaxLedIndx].SetLo();    // Switch off previous MaxLed
     MaxLedIndx = Mic2Led[Indx];
-    Led[MaxLedIndx].SetHi(); // Switch on new MaxLed
-    // Copy selected data to buffer-to-send and send to USB when needed
-    BufToSend[IndxToSend++] = IChnl[Indx];
-    if(IndxToSend >= PCM_USB_BUF_CNT) {
-        IndxToSend = 0;
-        UsbAu.SendBufI((uint8_t*)BufToSend, (PCM_USB_BUF_CNT * SAMPLE_SZ));
+    Led[MaxLedIndx].SetHi();    // Switch on new MaxLed
+    // Copy selected data to buffer-to-send and send to USB when filled up
+    if(Buf2Send.Append(IChnl[Indx]) == addrSwitch) {
+        uint8_t *p = (uint8_t*)Buf2Send.GetBufToRead();
+        UsbAu.SendBufI(p, USB_PKT_SZ);
     }
 }
 #endif

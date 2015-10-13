@@ -43,6 +43,7 @@ public:
     void EnterRunMode() { WriteReg(0x70, 0x70); }
     void EnterPowerdownMode() { WriteReg(0x70, 0x74); }
     void SetGain(int8_t Gain_dB);
+    int8_t GetGain(uint8_t Ch);
     // Debug
     void PrintState();
     void PrintClkRegs();

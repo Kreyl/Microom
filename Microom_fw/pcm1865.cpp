@@ -105,7 +105,7 @@ void PCM1865_t::Init() {
     ResetRegs();
     SelectPage(0);
 
-    // Clocks
+#if 1 // === Clocks ===
     WriteReg(0x28, 0x00);   // PLL disabled
     WriteReg(0x20, 0b00111110); // Master, use PLL for BCK/LRCK, All use PLL, Clk detector disabled
 
@@ -127,10 +127,11 @@ void PCM1865_t::Init() {
     WriteReg(0x27, 255);    // Master SCK Clock Divider = 256
 
     WriteReg(0x28, 0x01);   // PLL enabled, src is SCK
-
+#endif // Clocks
     // Common settings
 //    WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
-    WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
+//    WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
+    WriteReg(0x05, 0b11000111);
     // ADC Channel selection
     SelectMicGrp(mg1);
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
@@ -292,4 +293,11 @@ void PCM1865_t::SetGain(int8_t Gain_dB) {
 //    uint8_t b = ReadReg(0x01);
 //    Uart.Printf("\rAfter: %X", b);
 }
+
+int8_t PCM1865_t::GetGain(uint8_t Ch) {
+    int8_t g = ReadReg(Ch);
+    return g / 2;
+}
+
+
 #endif

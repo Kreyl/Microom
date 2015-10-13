@@ -13,6 +13,7 @@
 #include "uart.h"
 #include "evt_mask.h"
 #include "filter.h"
+#include "kl_buf.h"
 
 #define APP_NAME            "Microom"
 #define APP_VERSION         __DATE__ " " __TIME__
@@ -23,6 +24,7 @@
 #define USB_SAMPLES_PER_MS  8   // for 8kHz sampling freq
 #define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
 #define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)
+#define USB_PKT_SZ          (PCM_USB_BUF_CNT * SAMPLE_SZ)
 
 class App_t {
 private:
@@ -30,7 +32,8 @@ private:
     int16_t IChnl[CHNL_CNT];
     int MaxLedIndx = 1;
     LvlMtr_t LvlMtr[CHNL_CNT];
-    int16_t BufToSend[PCM_USB_BUF_CNT], IndxToSend=0;
+
+    DoubleBuf_t<int16_t, PCM_USB_BUF_CNT> Buf2Send;
 public:
     void ProcessValues(int16_t *Values);
     // Eternal methods
