@@ -10,7 +10,6 @@
 #include "usb_audio.h"
 #include "chprintf.h"
 #include "pcm1865.h"
-#include "board.h"
 #include "leds.h"
 #include "filter.h"
 
@@ -148,11 +147,9 @@ void App_t::OnUartCmd(Uart_t *PUart) {
     else if(PCmd->NameIs("#Stop"))  { PCurrentFilter->Stop();  UsbUart.Ack(OK); }
 #endif
 
-//    else UsbUart.Ack(CMD_UNKNOWN);  // reply only #-started stuff
-//}
 #endif
 
-#if 1 // =========================== Filtering =================================
+#if 1 // ======================= Sample processing =============================
 // Mic indx to Led indx
 const int Mic2Led[4] = {1, 4, 7, 6};
 

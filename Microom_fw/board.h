@@ -8,6 +8,9 @@
 #ifndef BOARD_H_
 #define BOARD_H_
 
+// General
+#define SAMPLING_FREQ_KHZ   8   // Set 8 or 16
+
 #if 1 // ========================== GPIO =======================================
 // UART
 #define UART_GPIO       GPIOB

@@ -8,7 +8,7 @@
 #include "ch.h"
 #include "hal.h"
 #include "descriptors_audio.h"
-
+#include "board.h"
 
 #if 1 // ==== Constants (not to change) ====
 #define EP_DIR_IN           0x80
@@ -36,14 +36,14 @@ static const uint8_t DeviceDescriptorData[18] = {
                          1)             // bNumConfigurations.
 };
 
-// Device Descriptor wrapper.
+// Device Descriptor wrapper
 static const USBDescriptor DeviceDescriptor = {
   sizeof DeviceDescriptorData,
   DeviceDescriptorData
 };
 #endif
 
-#if 1 // ==== Configuration Descriptor tree for a CDC ====
+#if 1 // ==== Configuration Descriptor tree ====
 #define USB_CONFIG_POWER_MA(mA) ((mA) >> 1)
 #define CS_INTERFACE            0x24    // Descriptor type
 #define USB_DESC_TRIBYTE(w)             \
@@ -69,7 +69,7 @@ static const uint8_t ConfigurationDescriptorData[CFG_TOTAL_LEN] = {
                          0x01,          // bInterfaceClass: AUDIO
                          0x01,          // bInterfaceSubClass: AUDIO_CONTROL
                          0x00,          // bInterfaceProtocol: unused
-                         0),            // iInterface.
+                         0),            // iInterface
 
     // ==== Class-specific AC Interface ====
     USB_DESC_BYTE        (0x09),    // bLength
@@ -143,7 +143,11 @@ static const uint8_t ConfigurationDescriptorData[CFG_TOTAL_LEN] = {
     USB_DESC_BYTE        (0x02),    // bSubFrameSize: Two bytes per audio subframe
     USB_DESC_BYTE        (16),      // bBitResolution: 16 bits per sample
     USB_DESC_BYTE        (0x01),    // bSamFreqType: One frequency supported
+#if SAMPLING_FREQ_KHZ == 8
     USB_DESC_TRIBYTE     (8000),    // 8000Hz
+#else
+    USB_DESC_TRIBYTE     (16000),   // 16000Hz
+#endif
 
     // ==== Standard Endpoint Descriptor ====
     USB_DESC_BYTE        (0x09),    // bLength

@@ -14,6 +14,7 @@
 #include "evt_mask.h"
 #include "filter.h"
 #include "kl_buf.h"
+#include "board.h"
 
 #define APP_NAME            "Microom"
 #define APP_VERSION         __DATE__ " " __TIME__
@@ -21,7 +22,12 @@
 #define CHNL_CNT            4 // 4 mics simultaneously
 
 // 8 samples per ms => 16 samples per two ms;
+#if SAMPLING_FREQ_KHZ == 8
 #define USB_SAMPLES_PER_MS  8   // for 8kHz sampling freq
+#else
+#define USB_SAMPLES_PER_MS  16  // for 16kHz sampling freq
+#endif
+
 #define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
 #define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)
 #define USB_PKT_SZ          (PCM_USB_BUF_CNT * SAMPLE_SZ)
@@ -29,7 +35,7 @@
 #define LVLMTR_CNT          4096 // Size of Moving Average for Level metering
 
 // Automatic Gain Control
-#define AGC_ENABLED         TRUE
+#define AGC_ENABLED         FALSE
 #define AGC_MAX_GAIN        PCM_MAX_GAIN_DB
 #define AGC_MIN_GAIN        PCM_MIN_GAIN_DB
 #define AGC_HI_VOLUME       1080

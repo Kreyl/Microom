@@ -43,8 +43,7 @@
 #define REG_ADC2L       0x08
 #define REG_ADC2R       0x09
 
-
-PinOutputPWM_t<15, invNotInverted, omPushPull> TmrClk {GPIOC, 6, TIM3, 1};
+PinOutputPWM_t<PCM_CLKTMR_TOP, invNotInverted, omPushPull> TmrClk {GPIOC, 6, TIM3, 1};
 
 // Wrapper for DMA TX IRQ
 extern "C" {
@@ -83,7 +82,7 @@ void PCM1865_t::Init() {
     PCM_DATA_SPI_RccEnable();
     // Slave, 16 bit, RX only, HW NSS, MSB, Slave, CPOL=0 (Clk Idle Low),
     // CPHA=0 (First edge), baudrate=32/4=8MHz
-    PCM_DATA_SPI->CR1 = SPI_CR1_DFF | SPI_CR1_RXONLY | ((uint16_t)sbFdiv4 << 3);
+    PCM_DATA_SPI->CR1 = SPI_CR1_DFF | SPI_CR1_RXONLY | ((uint16_t)sbFdiv2 << 3);
     PCM_DATA_SPI->CR2 = SPI_CR2_RXDMAEN;
     PCM_DATA_SPI->I2SCFGR = 0;  // Disable I2S
     PCM_DATA_SPI->CR1 |= SPI_CR1_SPE;
@@ -98,7 +97,7 @@ void PCM1865_t::Init() {
 
     // ==== Master clock generator (8 MHz) ====
     TmrClk.Init();
-    TmrClk.Set(7);
+    TmrClk.Set(PCM_CLKTMR_VALUE);
 
     chThdSleepMilliseconds(9);  // Let clocks to stabilize
 
@@ -131,8 +130,8 @@ void PCM1865_t::Init() {
 #endif // Clocks
     // Common settings
 //    WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
-//    WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
-    WriteReg(0x05, 0b11000111);
+    WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
+//    WriteReg(0x05, 0b11000111);
     // ADC Channel selection
     SelectMicGrp(mg1);
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
