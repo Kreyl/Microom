@@ -26,13 +26,26 @@
 #define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)
 #define USB_PKT_SZ          (PCM_USB_BUF_CNT * SAMPLE_SZ)
 
+#define LVLMTR_CNT          4096 // Size of Moving Average for Level metering
+
+// Automatic Gain Control
+#define AGC_ENABLED         TRUE
+#define AGC_MAX_GAIN        PCM_MAX_GAIN_DB
+#define AGC_MIN_GAIN        PCM_MIN_GAIN_DB
+#define AGC_HI_VOLUME       1080
+#define AGC_LO_VOLUME       1008
+#define AGC_PERIOD_TICKS    1000
+
 class App_t {
 private:
     thread_t *PThread;
     int16_t IChnl[CHNL_CNT];
     int MaxLedIndx = 1;
-    LvlMtr_t LvlMtr[CHNL_CNT];
-
+    LvlMtr_t<LVLMTR_CNT> LvlMtr[CHNL_CNT];
+#if AGC_ENABLED
+    uint32_t AgcCounter = 0;
+    int8_t Gain = 0;
+#endif
     DoubleBuf_t<int16_t, PCM_USB_BUF_CNT> Buf2Send;
 public:
     void ProcessValues(int16_t *Values);

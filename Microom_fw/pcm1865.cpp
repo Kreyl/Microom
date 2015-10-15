@@ -53,9 +53,9 @@ void PcmRxIrq(void *p, uint32_t flags) { Pcm.IRQDmaRxHandler(); }
 
 // ==== TX DMA IRQ ====
 void PCM1865_t::IRQDmaRxHandler() {
-//    Led[5].SetHi();
+    PinSet(GPIOC, 13);
     App.ProcessValues(IRxBuf);
-//    Led[5].SetLo();
+    PinClear(GPIOC, 13);
 }
 
 void PCM1865_t::Init() {
@@ -68,8 +68,8 @@ void PCM1865_t::Init() {
     PinSetupAlterFunc(PCM_SPI_GPIO, PCM_MISO, omPushPull, pudNone, PCM_SPI_AF);
     PinSetupAlterFunc(PCM_SPI_GPIO, PCM_MOSI, omPushPull, pudNone, PCM_SPI_AF);
     // ==== Control SPI ==== MSB first, master, ClkLowIdle, FirstEdge, Baudrate=32/4=8MHz
-    ISpi.Setup(PCM_CTRL_SPI, boMSB, cpolIdleLow, cphaSecondEdge, sbFdiv4);
-    ISpi.Enable();
+    ICtrlSpi.Setup(PCM_CTRL_SPI, boMSB, cpolIdleLow, cphaSecondEdge, sbFdiv4);
+    ICtrlSpi.Enable();
 
     EnterPowerdownMode();
 
@@ -81,8 +81,9 @@ void PCM1865_t::Init() {
 
     // SPI
     PCM_DATA_SPI_RccEnable();
-    // 16 bit, RX only, HW NSS, MSB, Slave, CPOL=0 (Clk Idle Low), CPHA=0 (First edge)
-    PCM_DATA_SPI->CR1 = SPI_CR1_DFF | SPI_CR1_RXONLY;
+    // Slave, 16 bit, RX only, HW NSS, MSB, Slave, CPOL=0 (Clk Idle Low),
+    // CPHA=0 (First edge), baudrate=32/4=8MHz
+    PCM_DATA_SPI->CR1 = SPI_CR1_DFF | SPI_CR1_RXONLY | ((uint16_t)sbFdiv4 << 3);
     PCM_DATA_SPI->CR2 = SPI_CR2_RXDMAEN;
     PCM_DATA_SPI->I2SCFGR = 0;  // Disable I2S
     PCM_DATA_SPI->CR1 |= SPI_CR1_SPE;
@@ -168,16 +169,16 @@ void PCM1865_t::WriteReg(uint8_t Addr, uint8_t Value) {
 //    Uart.Printf("\rW: %02X %02X", Addr, Value);
     CS.SetLo();
     Addr = (Addr << 1) | 0x00;  // Write operation
-    ISpi.ReadWriteByte(Addr);
-    ISpi.ReadWriteByte(Value);
+    ICtrlSpi.ReadWriteByte(Addr);
+    ICtrlSpi.ReadWriteByte(Value);
     CS.SetHi();
 }
 
 uint8_t PCM1865_t::ReadReg(uint8_t Addr) {
     CS.SetLo();
     Addr = (Addr << 1) | 0x01;  // Read operation
-    ISpi.ReadWriteByte(Addr);
-    uint8_t r = ISpi.ReadWriteByte(0);
+    ICtrlSpi.ReadWriteByte(Addr);
+    uint8_t r = ICtrlSpi.ReadWriteByte(0);
     CS.SetHi();
     return r;
 }
@@ -286,12 +287,7 @@ void PCM1865_t::PrintClkRegs() {
 void PCM1865_t::SetGain(int8_t Gain_dB) {
     if(Gain_dB < -12 or Gain_dB > 40) return;
     Gain_dB *= 2;
-//    Uart.Printf("\rG=%X", Gain_dB);
-//    WriteReg((uint8_t)Chnl, (uint8_t)Gain_dB);
     WriteReg(0x01, Gain_dB);
-//    chThdSleepMilliseconds(18);
-//    uint8_t b = ReadReg(0x01);
-//    Uart.Printf("\rAfter: %X", b);
 }
 
 int8_t PCM1865_t::GetGain(uint8_t Ch) {

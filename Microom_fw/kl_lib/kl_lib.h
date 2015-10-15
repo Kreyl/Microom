@@ -66,6 +66,7 @@ enum LowHigh_t  {Low, High};
 enum RiseFall_t {Rising, Falling};
 enum Inverted_t {invNotInverted, invInverted};
 enum PinOutMode_t {omPushPull = 0, omOpenDrain = 1};
+enum BitNumber_t {bitn8, bitn16, bitn32};
 
 typedef void (*ftVoidVoid)(void);
 typedef void (*ftVoidPVoid)(void*p);
@@ -748,7 +749,7 @@ private:
     SPI_TypeDef *PSpi;
 public:
     void Setup(SPI_TypeDef *Spi, BitOrder_t BitOrder,
-            CPOL_t CPOL, CPHA_t CPHA, SpiBaudrate_t Baudrate) {
+            CPOL_t CPOL, CPHA_t CPHA, SpiBaudrate_t Baudrate, BitNumber_t BitNumber = bitn8) {
         PSpi = Spi;
         // Clocking
         if      (PSpi == SPI1) { rccEnableSPI1(FALSE); }
@@ -762,6 +763,7 @@ public:
         if(CPHA == cphaSecondEdge) PSpi->CR1 |= SPI_CR1_CPHA;   // CPHA
         PSpi->CR1 |= ((uint16_t)Baudrate) << 3;                 // Baudrate
 #if defined STM32L1XX_MD || defined STM32F10X_LD_VL || defined STM32F4XX
+        if(BitNumber == bitn16) PSpi->CR1 |= SPI_CR1_DFF;
         PSpi->CR2 = 0;
 #elif defined STM32F030
         PSpi->CR2 = (uint16_t)0b1111 << 8;  // 16 bit data size only
@@ -771,6 +773,8 @@ public:
     void Enable () { PSpi->CR1 |=  SPI_CR1_SPE; }
     void Disable() { PSpi->CR1 &= ~SPI_CR1_SPE; }
     void EnableTxDma() { PSpi->CR2 |= SPI_CR2_TXDMAEN; }
+    void EnableRxDma() { PSpi->CR2 |= SPI_CR2_RXDMAEN; }
+    void SetRxOnly()   { PSpi->CR1 |= SPI_CR1_RXONLY; }
     void WaitBsyHi2Lo() { while(PSpi->SR & SPI_SR_BSY); }
     uint8_t ReadWriteByte(uint8_t AByte) {
         PSpi->DR = AByte;

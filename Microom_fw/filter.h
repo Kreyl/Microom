@@ -318,17 +318,16 @@ public:
 #endif
 
 #if 1 // ========================== Level meter ================================
-#define LVLMTR_CNT      4096
-
+template <uint32_t Sz>
 class LvlMtr_t : public Filter_t {
 private:
-    int32_t y1, x[LVLMTR_CNT];
+    int32_t y1, x[Sz];
     int32_t *pw, *pr;
 public:
     void Reset() {
         y1 = 0;
         pr = &x[0];
-        pw = &x[LVLMTR_CNT-1];
+        pw = &x[Sz-1];
     }
     int32_t AddXAndCalculate(int32_t x0) {
         x0 = ABS(x0);
@@ -337,9 +336,9 @@ public:
         y1 = y0;
         *pw = x0;
         pw++;
-        if(pw >= &x[LVLMTR_CNT]) pw = &x[0];
+        if(pw >= &x[Sz]) pw = &x[0];
         pr++;
-        if(pr >= &x[LVLMTR_CNT]) pr = &x[0];
+        if(pr >= &x[Sz]) pr = &x[0];
         // return result
         return y0;
     }

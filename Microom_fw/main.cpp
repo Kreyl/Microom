@@ -42,12 +42,10 @@ int main(void) {
 
     App.InitThread();
     // Leds
-    for(uint8_t i=0; i<9; i++) {
-        Led[i].Init();
-//        Led[i].SetHi();
-//        chThdSleepMilliseconds(270);
-//        Led[i].SetLo();
-    }
+    for(uint8_t i=0; i<9; i++) Led[i].Init();
+
+    // Debug: init CS2 as output
+    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
 
     // ==== USB ====
     UsbAu.Init();
@@ -173,6 +171,24 @@ void App_t::ProcessValues(int16_t *Values) {
             Indx = i;
         }
     }
+
+#if AGC_ENABLED
+    if(AgcCounter++ >= AGC_PERIOD_TICKS) {
+        AgcCounter = 0;
+        Max /= LVLMTR_CNT;
+        // Adjust gain
+        if(Max > AGC_HI_VOLUME and Gain > AGC_MIN_GAIN) {
+            Gain--;
+            Pcm.SetGain(Gain);
+        }
+        else if(Max < AGC_LO_VOLUME and Gain < AGC_MAX_GAIN) {
+            Gain++;
+            Pcm.SetGain(Gain);
+        }
+//        Uart.PrintfI("\rMax = %d; Gain = %d", Max, Gain);
+    }
+#endif
+
     // Show loudest
     Led[MaxLedIndx].SetLo();    // Switch off previous MaxLed
     MaxLedIndx = Mic2Led[Indx];

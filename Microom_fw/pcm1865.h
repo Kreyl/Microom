@@ -12,6 +12,9 @@
 #include "board.h"
 #include "main.h"
 
+#define PCM_MAX_GAIN_DB     40
+#define PCM_MIN_GAIN_DB     -12
+
 #define PCM_DMA_RX_MODE     STM32_DMA_CR_CHSEL(PCM_DMA_CHNL) | \
                             DMA_PRIORITY_MEDIUM | \
                             STM32_DMA_CR_MSIZE_HWORD | \
@@ -29,7 +32,7 @@ enum MicGroup_t {mg1, mg2};
 
 class PCM1865_t {
 private:
-    Spi_t ISpi;
+    Spi_t ICtrlSpi;
     PinOutput_t CS{PCM_CS_GPIO, PCM_CS_PIN, omPushPull};
     int16_t IRxBuf[PCM_RX_CH_CNT];
     void WriteReg(uint8_t Addr, uint8_t Value);
