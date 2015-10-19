@@ -35,7 +35,7 @@
 #define LVLMTR_CNT          4096 // Size of Moving Average for Level metering
 
 // Automatic Gain Control
-#define AGC_ENABLED         FALSE
+#define AGC_ENABLED         TRUE
 #define AGC_MAX_GAIN        PCM_MAX_GAIN_DB
 #define AGC_MIN_GAIN        PCM_MIN_GAIN_DB
 #define AGC_HI_VOLUME       1080

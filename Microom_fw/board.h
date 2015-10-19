@@ -9,7 +9,7 @@
 #define BOARD_H_
 
 // General
-#define SAMPLING_FREQ_KHZ   8   // Set 8 or 16
+#define SAMPLING_FREQ_KHZ   16   // Set 8 or 16
 
 #if 1 // ========================== GPIO =======================================
 // UART
