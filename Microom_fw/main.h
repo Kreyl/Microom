@@ -21,12 +21,12 @@
 
 #define CHNL_CNT            4 // 4 mics simultaneously
 
-// 8 samples per ms => 16 samples per two ms;
-#if SAMPLING_FREQ_KHZ == 8
-#define USB_SAMPLES_PER_MS  8   // for 8kHz sampling freq
-#else
+/* 16000 Hz sampling freq, 2 bytes per sample. One frame per millisecond
+ * means 16 samples per frame, but every second IN packet is lost. Therefore,
+ * 32 samples per frame required. */
+
+// 16 samples per ms => 32 samples per two ms;
 #define USB_SAMPLES_PER_MS  16  // for 16kHz sampling freq
-#endif
 
 #define SENDING_PERIOD      2   // Usb receives one pkt every two ms (usb driver works this way)
 #define PCM_USB_BUF_CNT     (USB_SAMPLES_PER_MS * SENDING_PERIOD)

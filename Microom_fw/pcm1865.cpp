@@ -12,15 +12,6 @@
 #include "usb_audio.h"
 #include "leds.h"
 
-/*
- * Fs = 8kHz
- */
-
-/* 8000 Hz sampling freq, 2 bytes per sample. One frame per millisecond
- * means 8 samples per frame, but every second IN packet is lost. Therefore,
- * 16 samples per frame required.
- */
-
 // ST I2S formats
 #define I2SSTD_I2S      0x00
 #define I2SSTD_MSB      SPI_I2SCFGR_I2SSTD_0

@@ -28,14 +28,8 @@
 #define PCM_RX_CH_CNT       8   // 4 meaningful + 4 dummy due to PCM1865 TDM mode realization
 
 // Master clock generation
-#if SAMPLING_FREQ_KHZ == 8
-#define PCM_CLKTMR_TOP      15
-#define PCM_CLKTMR_VALUE    7
-#else
 #define PCM_CLKTMR_TOP      7
 #define PCM_CLKTMR_VALUE    3
-#endif
-
 
 enum PcmAdcChnls_t {pacADC1L = 0x01, pacADC1R = 0x02, pacADC2L = 0x03, pacADC2R = 0x04};
 enum MicGroup_t {mg1, mg2};
