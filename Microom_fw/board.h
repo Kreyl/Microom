@@ -9,6 +9,7 @@
 #define BOARD_H_
 
 // General
+#define CRYSTAL_FREQ_HZ     10000000    // Freq of external crystal
 
 #if 1 // ========================== GPIO =======================================
 // UART

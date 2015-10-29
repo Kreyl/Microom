@@ -80,7 +80,7 @@ void App_t::ITask() {
         }
 #endif
         if(EvtMsk & EVTMSK_UART_NEW_CMD) {
-            OnUartCmd(&Uart);
+            OnCmd((Shell_t*)&Uart);
             Uart.SignalCmdProcessed();
         }
 
@@ -88,12 +88,12 @@ void App_t::ITask() {
 }
 
 #if 1 // ======================= Command processing ============================
-void App_t::OnUartCmd(Uart_t *PUart) {
-    UartCmd_t *PCmd = &PUart->Cmd;
+void App_t::OnCmd(Shell_t *PShell) {
+	Cmd_t *PCmd = &PShell->Cmd;
     __attribute__((unused)) int32_t dw32 = 0;  // May be unused in some configurations
     Uart.Printf("\r%S\r", PCmd->Name);
     // Handle command
-    if(PCmd->NameIs("Ping")) PUart->Ack(OK);
+    if(PCmd->NameIs("Ping")) PShell->Ack(OK);
 
     else if(PCmd->NameIs("State"))  Pcm.PrintState();
     else if(PCmd->NameIs("PwrDwn")) Pcm.EnterPowerdownMode();
@@ -103,23 +103,23 @@ void App_t::OnUartCmd(Uart_t *PUart) {
     else if(PCmd->NameIs("Grp2")) Pcm.SelectMicGrp(mg2);
 
     else if(PCmd->NameIs("SetGain")) {
-        if(PCmd->GetNextNumber(&dw32) != OK) { PUart->Ack(CMD_ERROR); return; }
+        if(PCmd->GetNextNumber(&dw32) != OK) { PShell->Ack(CMD_ERROR); return; }
         Pcm.SetGain((int8_t)dw32);
     }
 
     else if(PCmd->NameIs("GetGain")) {
         int8_t g;
         g = Pcm.GetGain(1);
-        PUart->Printf("\rGain1 = %d", g);
+        PShell->Printf("\rGain1 = %d", g);
         g = Pcm.GetGain(2);
-        PUart->Printf("\rGain2 = %d", g);
+        PShell->Printf("\rGain2 = %d", g);
         g = Pcm.GetGain(3);
-        PUart->Printf("\rGain3 = %d", g);
+        PShell->Printf("\rGain3 = %d", g);
         g = Pcm.GetGain(4);
-        PUart->Printf("\rGain4 = %d", g);
+        PShell->Printf("\rGain4 = %d", g);
     }
 
-    else PUart->Ack(CMD_UNKNOWN);
+    else PShell->Ack(CMD_UNKNOWN);
 }
 
 

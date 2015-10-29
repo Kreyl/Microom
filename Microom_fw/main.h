@@ -63,7 +63,7 @@ public:
         chSysUnlock();
     }
     void SignalEvtI(eventmask_t Evt) { chEvtSignalI(PThread, Evt); }
-    void OnUartCmd(Uart_t *PUart);
+    void OnCmd(Shell_t *PShell);
     // Inner use
     void ITask();
 };

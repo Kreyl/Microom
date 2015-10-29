@@ -205,8 +205,8 @@ void __early_init(void);
 }
 #elif defined STM32F4xx_MCUCONF
 #include "stm32f4xx.h"
+#include "board.h"
 
-#define CRYSTAL_FREQ_HZ     12000000    // Freq of external crystal, change accordingly
 #define HSI_FREQ_HZ         16000000    // Freq of internal generator, not adjustable
 #define LSI_FREQ_HZ         32000       // Freq of low power internal generator, may vary depending on voltage, not adjustable
 #define CLK_STARTUP_TIMEOUT 2007        // tics
