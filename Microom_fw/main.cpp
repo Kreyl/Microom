@@ -5,16 +5,13 @@
  *      Author: g.kruglov
  */
 
+#include "usb_keybrd.h"
 #include "main.h"
 #include "math.h"
-#include "usb_audio.h"
-#include "chprintf.h"
-#include "pcm1865.h"
 #include "leds.h"
 #include "filter.h"
 
 App_t App;
-PCM1865_t Pcm;
 
 int main(void) {
     // ==== Setup clock frequency ====
@@ -44,13 +41,11 @@ int main(void) {
     for(uint8_t i=0; i<9; i++) Led[i].Init();
 
     // Debug: init CS2 as output
-    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
+//    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
 
     // ==== USB ====
-    UsbAu.Init();
-    UsbAu.Connect();
-
-    Pcm.Init();
+    UsbKBrd.Init();
+    UsbKBrd.Connect();
 
     // Main cycle
     App.ITask();
@@ -72,12 +67,6 @@ void App_t::ITask() {
             Uart.Printf("\rUsbSuspend");
             Led[0].SetLo();
         }
-
-        if(EvtMsk & EVTMSK_START_LISTEN) {
-        }
-        if(EvtMsk & EVTMSK_STOP_LISTEN) {
-
-        }
 #endif
         if(EvtMsk & EVTMSK_UART_NEW_CMD) {
             OnCmd((Shell_t*)&Uart);
@@ -95,105 +84,7 @@ void App_t::OnCmd(Shell_t *PShell) {
     // Handle command
     if(PCmd->NameIs("Ping")) PShell->Ack(OK);
 
-    else if(PCmd->NameIs("State"))  Pcm.PrintState();
-    else if(PCmd->NameIs("PwrDwn")) Pcm.EnterPowerdownMode();
-    else if(PCmd->NameIs("Run"))    Pcm.EnterRunMode();
-
-    else if(PCmd->NameIs("Grp1")) Pcm.SelectMicGrp(mg1);
-    else if(PCmd->NameIs("Grp2")) Pcm.SelectMicGrp(mg2);
-
-    else if(PCmd->NameIs("SetGain")) {
-        if(PCmd->GetNextNumber(&dw32) != OK) { PShell->Ack(CMD_ERROR); return; }
-        Pcm.SetGain((int8_t)dw32);
-    }
-
-    else if(PCmd->NameIs("GetGain")) {
-        int8_t g;
-        g = Pcm.GetGain(1);
-        PShell->Printf("\rGain1 = %d", g);
-        g = Pcm.GetGain(2);
-        PShell->Printf("\rGain2 = %d", g);
-        g = Pcm.GetGain(3);
-        PShell->Printf("\rGain3 = %d", g);
-        g = Pcm.GetGain(4);
-        PShell->Printf("\rGain4 = %d", g);
-    }
-
     else PShell->Ack(CMD_UNKNOWN);
 }
 
-
-#if 0 // ==== Common ====
-    else if(PCmd->NameIs("#SetSmplFreq")) {
-        if(PCmd->GetNextToken() != OK) { UsbUart.Ack(CMD_ERROR); return; }
-        if(PCmd->TryConvertTokenToNumber(&dw32) != OK) { UsbUart.Ack(CMD_ERROR); return; }
-        SamplingTmr.SetUpdateFrequency(dw32);
-        UsbUart.Ack(OK);
-    }
-
-    else if(PCmd->NameIs("#SetResolution")) {
-        if(PCmd->GetNextToken() != OK) { UsbUart.Ack(CMD_ERROR); return; }
-        if((PCmd->TryConvertTokenToNumber(&dw32) != OK) or (dw32 < 1 or dw32 > 16)) { UsbUart.Ack(CMD_ERROR); return; }
-        ResolutionMask = 0xFFFF << (16 - dw32);
-        UsbUart.Ack(OK);
-    }
-
-    // Output analog filter
-    else if(PCmd->NameIs("#OutFilterOn"))  { OutputFilterOn();  UsbUart.Ack(OK); }
-    else if(PCmd->NameIs("#OutFilterOff")) { OutputFilterOff(); UsbUart.Ack(OK); }
-
-    // Stat/Stop
-    else if(PCmd->NameIs("#Start")) { PCurrentFilter->Start(); UsbUart.Ack(OK); }
-    else if(PCmd->NameIs("#Stop"))  { PCurrentFilter->Stop();  UsbUart.Ack(OK); }
-#endif
-
-#endif
-
-#if 1 // ======================= Sample processing =============================
-// Mic indx to Led indx
-const int Mic2Led[4] = {1, 4, 7, 6};
-
-void App_t::ProcessValues(int16_t *Values) {
-    // Copy values to local array (and do not afraid that Values[] will be overwritten by DMA)
-    IChnl[0] = Values[0];   // Mic1
-    IChnl[1] = Values[1];   // Mic4
-    IChnl[2] = Values[2];   // Mic7
-    IChnl[3] = Values[3];   // Mic6
-    // Calculate level
-    int32_t Max = 0, Indx = 0;
-    for(int i=0; i<CHNL_CNT; i++) {
-        int32_t Lvl = LvlMtr[i].AddXAndCalculate(IChnl[i]);
-        if(Max < Lvl) {
-            Max = Lvl;
-            Indx = i;
-        }
-    }
-
-#if AGC_ENABLED
-    if(AgcCounter++ >= AGC_PERIOD_TICKS) {
-        AgcCounter = 0;
-        Max /= LVLMTR_CNT;
-        // Adjust gain
-        if(Max > AGC_HI_VOLUME and Gain > AGC_MIN_GAIN) {
-            Gain--;
-            Pcm.SetGain(Gain);
-        }
-        else if(Max < AGC_LO_VOLUME and Gain < AGC_MAX_GAIN) {
-            Gain++;
-            Pcm.SetGain(Gain);
-        }
-//        Uart.PrintfI("\rMax = %d; Gain = %d", Max, Gain);
-    }
-#endif
-
-    // Show loudest
-    Led[MaxLedIndx].SetLo();    // Switch off previous MaxLed
-    MaxLedIndx = Mic2Led[Indx];
-    Led[MaxLedIndx].SetHi();    // Switch on new MaxLed
-    // Copy selected data to buffer-to-send and send to USB when filled up
-    if(Buf2Send.Append(IChnl[Indx]) == addrSwitch) {
-        uint8_t *p = (uint8_t*)Buf2Send.GetBufToRead();
-        UsbAu.SendBufI(p, USB_PKT_SZ);
-    }
-}
 #endif

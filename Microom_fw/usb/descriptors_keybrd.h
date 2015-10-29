@@ -5,19 +5,22 @@
  *      Author: Kreyl
  */
 
-#ifndef USB_DESCRIPTORS_AUDIO_H_
-#define USB_DESCRIPTORS_AUDIO_H_
+#ifndef USB_DESCRIPTORS_KEYBRD_H_
+#define USB_DESCRIPTORS_KEYBRD_H_
+
+#include "ch.h"
+#include "hal.h"
 
 // Endpoints to be used
 #define EP_DATA_IN_ID       1
 
-// Endpoint Sizes for Full-Speed devices
+// Endpoint Sizes for Full-Speed devices. Do not touch.
 #define EP0_SZ              64  // Control Endpoint must have a packet size of 64 bytes
-#define EP_INTERRUPT_SZ     8   // Max size is 64 bytes
+#define EP_INTERRUPT_SZ     64  // Max size is 64 bytes
 #define EP_BULK_SZ          64  // Max size is 64 bytes
 
-#define USBD_VID            0x0483  // ST Micro
-#define USBD_PID            0x5730  // Audio
+#define USBD_VID            0x03EB  // Atmel
+#define USBD_PID            0x2042  // Keyboard
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,4 +30,4 @@ const USBDescriptor *GetDescriptor(USBDriver *usbp, uint8_t dtype, uint8_t dinde
 }
 #endif
 
-#endif /* USB_DESCRIPTORS_AUDIO_H_ */
+#endif /* USB_DESCRIPTORS_KEYBRD_H_ */

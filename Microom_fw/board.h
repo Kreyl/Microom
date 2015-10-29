@@ -9,7 +9,10 @@
 #define BOARD_H_
 
 // General
-#define CRYSTAL_FREQ_HZ     10000000    // Freq of external crystal
+#define CRYSTAL_FREQ_HZ     12000000    // Freq of external crystal
+
+// USB
+#define USBDrv      	USBD1   // USB driver to use
 
 #if 1 // ========================== GPIO =======================================
 // UART
@@ -17,16 +20,6 @@
 #define UART_TX_PIN     6
 #define UART_RX_PIN     7
 #define UART_AF         AF7
-
-// PCM
-#define PCM_CS_GPIO     GPIOA
-#define PCM_CS_PIN      4
-
-#define PCM_SPI_GPIO    GPIOA
-#define PCM_SCK         5
-#define PCM_MISO        6
-#define PCM_MOSI        7
-#define PCM_SPI_AF      AF5
 
 // LEDs
 #define LED1_PIN        2
@@ -47,12 +40,14 @@
 #define LED8_GPIO       GPIOA
 #define LEDAUX_PIN      10
 #define LEDAUX_GPIO     GPIOB
+
+// USB
+#define USB_GPIO		GPIOA
+#define USB_DM_PIN		11
+#define USB_DP_PIN		12
 #endif
 
 #if 1 // =========================== SPI =======================================
-#define PCM_CTRL_SPI    SPI1
-#define PCM_DATA_SPI    SPI2
-#define PCM_DATA_SPI_RccEnable() rccEnableSPI2(FALSE);
 
 #endif
 
@@ -68,13 +63,6 @@
 #define UART_DMA_RX     STM32_DMA2_STREAM5
 #define UART_DMA_CHNL   4
 
-// PCM
-#define PCM_DMA_STREAM  STM32_DMA1_STREAM3
-#define PCM_DMA_CHNL    0
-
 #endif
-
-
-
 
 #endif /* BOARD_H_ */

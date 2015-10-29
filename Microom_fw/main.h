@@ -16,7 +16,7 @@
 #include "kl_buf.h"
 #include "board.h"
 
-#define APP_NAME            "Microom"
+#define APP_NAME            "Gesture Sensor"
 #define APP_VERSION         __DATE__ " " __TIME__
 
 #define CHNL_CNT            4 // 4 mics simultaneously
