@@ -133,7 +133,7 @@ void __attribute__ ((weak)) _init(void)  {}
 }
 #endif
 
-#if 0 // ======================= Virtual Timer =================================
+#if 1 // ======================= Virtual Timer =================================
 #define VIRTUAL_TIMER_KL    TRUE
 // Universal VirtualTimer callback
 void TmrVirtualCallback(void *p);
@@ -142,21 +142,21 @@ enum TmrType_t {tvtOneShot, tvtPeriodic};
 
 class TmrVirtual_t {
 private:
-    VirtualTimer Tmr;
+    virtual_timer_t Tmr;
     void StartI() { chVTSetI(&Tmr, Period, TmrVirtualCallback, this); }
-    Thread *PThread;
+    thread_t *PThread;
     systime_t Period;
     eventmask_t EvtMsk;
     TmrType_t TmrType;
 public:
-    void InitAndStart(Thread *APThread, systime_t APeriod, eventmask_t AEvtMsk, TmrType_t AType) {
+    void InitAndStart(thread_t *APThread, systime_t APeriod, eventmask_t AEvtMsk, TmrType_t AType) {
         PThread = APThread;
         Period = APeriod;
         EvtMsk = AEvtMsk;
         TmrType = AType;
         Start();
     }
-    void Init(Thread *APThread, systime_t APeriod, eventmask_t AEvtMsk, TmrType_t AType) {
+    void Init(thread_t *APThread, systime_t APeriod, eventmask_t AEvtMsk, TmrType_t AType) {
         PThread = APThread;
         Period = APeriod;
         EvtMsk = AEvtMsk;
@@ -173,10 +173,10 @@ public:
         Start();
     }
     void CallbackHandler() {    // Call it inside callback
-        chSysLockFromIsr();
+        chSysLockFromISR();
         chEvtSignalI(PThread, EvtMsk);
         if(TmrType == tvtPeriodic) StartI();
-        chSysUnlockFromIsr();
+        chSysUnlockFromISR();
     }
     TmrVirtual_t() : PThread(nullptr), Period(999), EvtMsk(0), TmrType(tvtOneShot) {}
 };

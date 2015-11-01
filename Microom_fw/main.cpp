@@ -53,8 +53,8 @@ int main(void) {
 
 __attribute__ ((__noreturn__))
 void App_t::ITask() {
-    // Filters init
-    for(int i=0; i<CHNL_CNT; i++) LvlMtr[i].Reset();
+    TmrSampling.Init(PThread, MS2ST(999), EVTMSK_SAMPLING, tvtPeriodic);
+
 
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
@@ -73,6 +73,9 @@ void App_t::ITask() {
             Uart.SignalCmdProcessed();
         }
 
+        if(EvtMsk & EVTMSK_SAMPLING) {
+        	UsbKBrd.PressKey(HID_KEYBOARD_SC_A);
+        }
     } // while true
 }
 
@@ -83,6 +86,15 @@ void App_t::OnCmd(Shell_t *PShell) {
     Uart.Printf("\r%S\r", PCmd->Name);
     // Handle command
     if(PCmd->NameIs("Ping")) PShell->Ack(OK);
+
+    else if(PCmd->NameIs("Act")) {
+    	TmrSampling.Start();
+    	PShell->Ack(OK);
+    }
+    else if(PCmd->NameIs("Deact")) {
+    	TmrSampling.Stop();
+    	PShell->Ack(OK);
+    }
 
     else PShell->Ack(CMD_UNKNOWN);
 }
