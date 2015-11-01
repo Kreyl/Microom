@@ -14,7 +14,13 @@
 struct SetupPkt_t {
     uint8_t bmRequestType;
     uint8_t bRequest;
-    uint16_t wValue;
+    union {
+    	uint16_t wValue;
+    	struct {
+    		uint8_t wValueLSB;
+    		uint8_t wValueMSB;
+    	};
+    };
     uint16_t wIndex;
     uint16_t wLength;
 };

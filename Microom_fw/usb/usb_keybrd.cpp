@@ -16,39 +16,45 @@
 UsbKBrd_t UsbKBrd;
 
 bool OnSetupPkt(USBDriver *usbp);
-static void usb_event(USBDriver *usbp, usbevent_t event);
+static void OnUsbEvent(USBDriver *usbp, usbevent_t event);
+
+static USBInEndpointState ep1Instate;
+const USBDescriptor *pDesc;
 
 #if 1 // ========================== Endpoints ==================================
 // ==== EP1 ====
-void OnDataTransmitted(USBDriver *usbp, usbep_t ep) {  }
-
-static USBInEndpointState ep1instate;
+void EpInCallback(USBDriver *usbp, usbep_t ep) {
+	chSysLockFromISR();
+	UsbKBrd.ISendInReportI();
+	chSysUnlockFromISR();
+}
 
 // EP1 initialization structure (both IN and OUT).
 static const USBEndpointConfig ep1config = {
     USB_EP_MODE_TYPE_INTR,
     NULL,                   // setup_cb
-    OnDataTransmitted,      // in_cb
+	EpInCallback,      		// in_cb
     NULL,                   // out_cb
     64,                     // in_maxsize
     64,                     // out_maxsize
-    &ep1instate,            // in_state
+    &ep1Instate,            // in_state
     NULL,                   // out_state
     2,                      // in_multiplier: Determines the space allocated for the TXFIFO as multiples of the packet size
     NULL                    // setup_buf: Pointer to a buffer for setup packets. Set this field to NULL for non-control endpoints
 };
+
 #endif
 
 #if 1 // ======================== Events & Config ==============================
 // ==== USB driver configuration ====
 const USBConfig UsbCfg = {
-    usb_event,          // This callback is invoked when an USB driver event is registered
+	OnUsbEvent,         // This callback is invoked when an USB driver event is registered
     GetDescriptor,      // Device GET_DESCRIPTOR request callback
     OnSetupPkt,         // This hook allows to be notified of standard requests or to handle non standard requests
     NULL                // Start Of Frame callback
 };
 
-static void usb_event(USBDriver *usbp, usbevent_t event) {
+void OnUsbEvent(USBDriver *usbp, usbevent_t event) {
 	Uart.PrintfI("\rUSB evt=%X", event);
     switch (event) {
         case USB_EVENT_RESET:
@@ -65,7 +71,7 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
             return;
         case USB_EVENT_SUSPEND:
             chSysLockFromISR();
-            App.SignalEvtI(EVTMSK_USB_READY);
+            App.SignalEvtI(EVTMSK_USB_SUSPEND);
             chSysUnlockFromISR();
             return;
         case USB_EVENT_WAKEUP:
@@ -86,74 +92,93 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
 
 bool OnSetupPkt(USBDriver *usbp) {
     SetupPkt_t *Setup = (SetupPkt_t*)usbp->setup;
-    Uart.PrintfI("\rSetup: %A", usbp->setup, 8, ' ');
-    if(Setup->wIndex == 0) {	// 0 is Keyboard interface number
+//    Uart.PrintfI("\rSetup: %A", usbp->setup, 8, ' ');
+    if((Setup->bmRequestType & USB_RTYPE_TYPE_MASK) == USB_RTYPE_TYPE_CLASS) {
+    	Uart.PrintfI("\rSetup: %A", usbp->setup, 8, ' ');
     	switch(Setup->bRequest) {
+    		// This request is mandatory and must be supported by all devices
     		case HID_REQ_GetReport:
-    			if(Setup->bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE)) {
-    				uint16_t ReportSize = 0;
-    				uint8_t  ReportID   = (Setup->wValue & 0xFF);
-    				uint8_t  ReportType = (Setup->wValue >> 8) - 1;
-    				uint8_t  ReportData[HIDInterfaceInfo->Config.PrevReportINBufferSize];
-
-    				memset(ReportData, 0, sizeof(ReportData));
-
-    				CALLBACK_HID_Device_CreateHIDReport(HIDInterfaceInfo, &ReportID, ReportType, ReportData, &ReportSize);
-
-    				if (HIDInterfaceInfo->Config.PrevReportINBuffer != NULL)
-    				{
-    					memcpy(HIDInterfaceInfo->Config.PrevReportINBuffer, ReportData,
-    					       HIDInterfaceInfo->Config.PrevReportINBufferSize);
-    				}
-
-    				Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
-
-    				Endpoint_ClearSETUP();
-
-    				if (ReportID)
-    				  Endpoint_Write_8(ReportID);
-
-    				Endpoint_Write_Control_Stream_LE(ReportData, ReportSize);
-    				Endpoint_ClearOUT();
+    			// The wValue field specifies the Report Type in the high byte and the Report ID in the low byte
+    			if(Setup->wValueMSB == 1) {	// 1 == Input
+    				usbSetupTransfer(usbp, (uint8_t*)&UsbKBrd.Report, USB_KEYBRD_REPORT_SZ, NULL);
+    				return true;
     			}
-
+    			break;
+    		case HID_REQ_SetReport:
+    			Uart.PrintfI("\rSetRep Len = %u", Setup->wLength);
+    			return true;
+    			break;
+    		// This request is required only for boot devices
+    		case HID_REQ_GetProtocol:
+    			// The Get_Protocol request reads which protocol is currently active (either the boot
+    			// protocol or the report protocol)
+    			usbSetupTransfer(usbp, &UsbKBrd.Protocol, 1, NULL);
+    			return true;
+    			break;
+    		// This request is required only for boot devices
+    		case HID_REQ_SetProtocol:
+    			UsbKBrd.Protocol = Setup->wValue;
+    			return true;
     			break;
 
-    	}
-    }
+    		case HID_REQ_GetIdle:
+    			usbSetupTransfer(usbp, &UsbKBrd.IdleRate, 1, NULL);
+    			return true;
+				break;
+    		case HID_REQ_SetIdle:
+    			UsbKBrd.IdleRate = Setup->wValueMSB;
+    			return true;
+    			break;
+    	} // switch
+    } // if class
 
-
-    if(Setup->bmRequestType == 0x01) { // Host2Device, standard, recipient=interface
-        if(Setup->bRequest == USB_REQ_SET_INTERFACE) {
-            if(Setup->wIndex == 1) {
-                usbSetupTransfer(usbp, NULL, 0, NULL);
-                // wValue contains alternate setting
-                chSysLockFromISR();
-                if(Setup->wValue == 1) {    // Transmission on
-//                    App.SignalEvtI(EVTMSK_START_LISTEN);
-                }
-                else {
-//                    App.SignalEvtI(EVTMSK_STOP_LISTEN);
-                }
-                chSysUnlockFromISR();
-                return true;
-            }
-        }
+    // GetDescriptor for HID class
+    if(Setup->bmRequestType == 0x81 and Setup->bRequest == USB_REQ_GET_DESCRIPTOR) {
+    	// The low byte is the Descriptor Index used to specify the set for Physical
+    	// Descriptors, and is reset to zero for other HID class descriptors
+    	if(Setup->wValueLSB == 0) {
+    		pDesc = usbp->config->get_descriptor_cb(usbp, Setup->wValueMSB, 0, Setup->wIndex);
+			if(pDesc != NULL) {
+				usbSetupTransfer(usbp, (uint8_t*)pDesc->ud_string, pDesc->ud_size, NULL);
+				return true;
+			}
+		}
     }
     return false;
 }
 
-//void UsbAudio_t::SendBufI(uint8_t *Ptr, uint32_t Len) {
-//    if(!IsListening) return;
-//    // If the USB driver is not in the appropriate state then transactions must not be started
-//    if(usbGetDriverStateI(&USBDrv) != USB_ACTIVE) return;
-//    // If there is not an ongoing transaction and Len != 0
-//    if(!usbGetTransmitStatusI(&USBDrv, EP_DATA_IN_ID)) {
-//        if(Len > 0) {
-//            usbPrepareTransmit(&USBD1, EP_DATA_IN_ID, Ptr, Len);
-//            chSysLockFromISR();
-//            usbStartTransmitI(&USBD1, EP_DATA_IN_ID);
-//            chSysUnlockFromISR();
-//        }
-//    }
-//}
+void UsbKBrd_t::ISendInReportI() {
+	if(usbGetDriverStateI(&USBDrv) != USB_ACTIVE) return;
+	if(usbGetTransmitStatusI(&USBDrv, EP_DATA_IN_ID)) return;	// Endpoin busy
+	// Send report if there are changes or should send repeatedly
+	if(IdleRate != 0 or HasChanged) {
+		usbPrepareTransmit(&USBDrv, EP_DATA_IN_ID, (uint8_t*)&Report, USB_KEYBRD_REPORT_SZ);
+		usbStartTransmitI(&USBDrv, EP_DATA_IN_ID);
+		HasChanged = false;
+	}
+}
+
+void UsbKBrd_t::PressKey(uint8_t KeyCode) {
+	chSysLock();
+	for(uint8_t i=0; i<6; i++) {
+		if(Report.KeyCode[i] == 0) {
+			Report.KeyCode[i] = KeyCode;
+			HasChanged = true;
+			ISendInReportI();
+			break;
+		}
+	}
+	chSysUnlock();
+}
+void UsbKBrd_t::DepressKey(uint8_t KeyCode) {
+	chSysLock();
+	for(uint8_t i=0; i<6; i++) {
+		if(Report.KeyCode[i] == KeyCode) {
+			Report.KeyCode[i] = 0;
+			HasChanged = true;
+			ISendInReportI();
+			break;
+		}
+	}
+	chSysUnlock();
+}

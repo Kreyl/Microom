@@ -18,6 +18,10 @@
 #define EP_TYPE_ISOCHRONOUS 0x01
 #define EP_TYPE_BULK        0x02
 #define EP_TYPE_INTERRUPT   0x03
+
+// HID
+#define USB_DESCRIPTOR_HID	0x21
+#define USB_DESCRIPTOR_HID_REPORT	0x22
 #endif
 
 #define VERSION_BCD(Major, Minor, Revision) \
@@ -84,13 +88,13 @@ static const uint8_t ConfigurationDescriptorData[] = {
                          0),            // iInterface
 
 	// ==== HID Descriptor ====
-	USB_DESC_BYTE        (0x09),	/* bLength */	\
-	USB_DESC_BYTE        (HID_DTYPE_HID),    /* bDescriptorType (HID class HID descriptor) */ \
-	USB_DESC_WORD		 (VERSION_BCD(1,1,1)), /* bcdHID: HID Class	Specification release */ \
-	USB_DESC_BYTE        (0), 		/* bCountryCode */ \
-	USB_DESC_BYTE        (1), 		/* bNumDescriptors: number of class descriptors (always at least one i.e. Report descriptor) */ \
-	USB_DESC_BYTE        (0x22),	/* bDescriptorType: HID report descriptor */ \
-	USB_DESC_WORD		 (sizeof(KeyboardReport)), /* wDescriptorLength: total size of the Report descriptor */
+	USB_DESC_BYTE        (0x09),	            // bLength
+	USB_DESC_BYTE        (USB_DESCRIPTOR_HID),	// bDescriptorType (HID class HID descriptor)
+	USB_DESC_WORD		 (VERSION_BCD(1,1,1)),  // bcdHID: HID Class	Specification release
+	USB_DESC_BYTE        (0), 		// bCountryCode
+	USB_DESC_BYTE        (1), 		// bNumDescriptors: number of class descriptors (always at least one i.e. Report descriptor)
+	USB_DESC_BYTE        (0x22),	// bDescriptorType: HID report descriptor
+	USB_DESC_WORD		 (sizeof(KeyboardReport)), // wDescriptorLength: total size of the Report descriptor
 
     // ==== Standard Endpoint Descriptor ====
 	USB_DESC_ENDPOINT     (
@@ -199,10 +203,10 @@ const USBDescriptor *GetDescriptor(USBDriver *usbp, uint8_t dtype, uint8_t dinde
                 return &DescStrings[dindex];
             }
             break;
-        case HID_DTYPE_HID:
+        case USB_DESCRIPTOR_HID:
         	return &HIDDescriptor;
         	break;
-        case HID_DTYPE_Report:
+        case USB_DESCRIPTOR_HID_REPORT:
         	return &ReportDescriptor;
         	break;
     } // switch

@@ -19,8 +19,8 @@
 #define EP_INTERRUPT_SZ     64  // Max size is 64 bytes
 #define EP_BULK_SZ          64  // Max size is 64 bytes
 
-#define USBD_VID            0x03EB  // Atmel
-#define USBD_PID            0x2042  // Keyboard
+#define USBD_VID            0x0483  // ST
+#define USBD_PID            0x5741  // stm32 + 1
 
 #ifdef __cplusplus
 extern "C" {

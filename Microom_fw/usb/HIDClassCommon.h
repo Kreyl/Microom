@@ -549,10 +549,6 @@
 			HID_REQ_SetProtocol     = 0x0B, /**< HID class-specific Request to set the current HID report protocol mode. */
 		};
 
-		/** HID class specific descriptor types. */
-#define HID_DTYPE_HID		0x21
-#define HID_DTYPE_Report	0x22
-
 		/** Enum for the different types of HID reports. */
 		enum HID_ReportItemTypes_t
 		{
@@ -585,7 +581,7 @@
 			uint8_t Reserved; /**< Reserved for OEM use, always set to 0. */
 			uint8_t KeyCode[6]; /**< Key codes of the currently pressed keys. */
 		} __attribute__((packed)) USB_KeyboardReport_Data_t;
-
+#define USB_KEYBRD_REPORT_SZ	sizeof(USB_KeyboardReport_Data_t)
 	/* Disable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
 			}
