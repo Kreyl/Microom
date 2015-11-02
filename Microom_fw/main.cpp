@@ -39,6 +39,7 @@ int main(void) {
 
     App.InitThread();
   	Led[0].Init();
+  	Led[1].Init();
 
     Adc.Init();
     PinSetupAnalog(GPIOC, 0);
@@ -57,7 +58,7 @@ int main(void) {
 
 __attribute__ ((__noreturn__))
 void App_t::ITask() {
-    TmrSampling.InitAndStart(PThread, MS2ST(153), EVTMSK_SAMPLING, tvtPeriodic);
+    TmrSampling.InitAndStart(PThread, MS2ST(SAMPLING_INTERVAL_MS), EVTMSK_SAMPLING, tvtPeriodic);
 
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
@@ -84,12 +85,38 @@ void App_t::ITask() {
         if(EvtMsk & EVTMSK_ADC_DONE) {
          	uint32_t Sns0 = Adc.GetResult(SNS_CHNL0);
          	uint32_t Sns1 = Adc.GetResult(SNS_CHNL1);
-         	Uart.Printf("\r%u; %u", Sns0, Sns1);
-
-
+         	ProcessValues(Sns0, Sns1);
         }
     } // while true
 }
+
+#if 1 // ======================= Signal processing =============================
+void App_t::ProcessValues(uint32_t Sns0, uint32_t Sns1) {
+// 	Uart.Printf("\r%u; %u", Sns0, Sns1);
+ 	SnsState_t Current;
+ 	Current.St0 = (Sns0 > SNS_VALUE_THRESHOLD)? 1 : 0;
+ 	Current.St1 = (Sns1 > SNS_VALUE_THRESHOLD)? 1 : 0;
+ 	if(Current.St0 == 0 and Current.St1 == 0) return; // ignore "nothing" info
+ 	// Check if changed
+ 	if(Current != IBuf[0]) {
+ 		// Shift buffer
+ 		for(uint32_t i=(BUF_CNT-1); i>0; i--) IBuf[i] = IBuf[i-1];
+		IBuf[0] = Current;	// Put new value into the buf
+//		Uart.Printf("\rBuf:"); for(uint32_t i=0; i<GESTURE_LEN; i++) Uart.Printf(" %d %d;", IBuf[i].St0, IBuf[i].St1);
+		// ==== Compare gesture sequence ====
+		bool IsLike = true;
+		for(uint32_t i=0; i<GESTURE_LEN; i++) {
+			if(IBuf[i] != Gesture[GESTURE_LEN - 1 - i]) {
+				IsLike = false;
+				break;
+			}
+		} // for
+		if(IsLike) {
+			Uart.Printf("\rGest");
+		}
+ 	} // if changed
+}
+#endif
 
 #if 1 // ======================= Command processing ============================
 void App_t::OnCmd(Shell_t *PShell) {
