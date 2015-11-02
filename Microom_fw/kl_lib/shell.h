@@ -49,7 +49,7 @@ public:
     uint8_t GetNextNumber(int32_t *POutput) {
         uint8_t r;
         if((r = GetNextTokenString()) == OK) {
-            if(*Token == '\0') return EMPTY_STRING;
+            if(*Token == '\0') return EMPTY;
             char *p;
             *POutput = strtol(Token, &p, 0);
             return (*p == '\0')? OK : NOT_A_NUMBER;
@@ -77,8 +77,8 @@ public:
 	}
 
 	virtual void Printf(const char *S, ...);
-	void Reply(const char* CmdCode, int32_t Data) { Printf("#%S,%d\r\n", CmdCode, Data); }
-	void Ack(int32_t Result) { Printf("\r\n#Ack %d", Result); }
+	void Reply(const char* CmdCode, int32_t Data) { Printf("%S,%d\r\n", CmdCode, Data); }
+	void Ack(int32_t Result) { Printf("\r\nAck %d", Result); }
 };
 
 #endif /* KL_LIB_SHELL_H_ */

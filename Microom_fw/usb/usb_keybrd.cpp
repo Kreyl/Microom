@@ -100,7 +100,7 @@ bool OnSetupPkt(USBDriver *usbp) {
     		case HID_REQ_GetReport:
     			// The wValue field specifies the Report Type in the high byte and the Report ID in the low byte
     			if(Setup->wValueMSB == 1) {	// 1 == Input
-    				usbSetupTransfer(usbp, (uint8_t*)&UsbKBrd.Report, USB_KEYBRD_REPORT_SZ, NULL);
+    				usbSetupTransfer(usbp, (uint8_t*)&UsbKBrd.LastReport, USB_KEYBRD_REPORT_SZ, NULL);
     				return true;
     			}
     			break;
@@ -149,36 +149,56 @@ bool OnSetupPkt(USBDriver *usbp) {
 
 void UsbKBrd_t::ISendInReportI() {
 	if(usbGetDriverStateI(&USBDrv) != USB_ACTIVE) return;
-	if(usbGetTransmitStatusI(&USBDrv, EP_DATA_IN_ID)) return;	// Endpoin busy
+	if(usbGetTransmitStatusI(&USBDrv, EP_DATA_IN_ID)) return;	// Endpoint busy
+
+	USB_KeyboardReport_Data_t *p = nullptr;
+	if(IReports.GetPAndMove(&p) == EMPTY) {
+		// If should repeat, but nothing new in buffer get last report to send
+		if(IdleRate != 0) IReports.GetLastP(&p);
+	}
 	// Send report if there are changes or should send repeatedly
-	if(IdleRate != 0 or HasChanged) {
-		usbPrepareTransmit(&USBDrv, EP_DATA_IN_ID, (uint8_t*)&Report, USB_KEYBRD_REPORT_SZ);
+	if(p != nullptr) {
+		usbPrepareTransmit(&USBDrv, EP_DATA_IN_ID, (uint8_t*)p, USB_KEYBRD_REPORT_SZ);
 		usbStartTransmitI(&USBDrv, EP_DATA_IN_ID);
-		HasChanged = false;
 	}
 }
 
+#if 1 // ========================= High level ===============================
 void UsbKBrd_t::PressKey(uint8_t KeyCode) {
 	chSysLock();
+	// Check if already pressed
+	bool AlreadyPressed = false;
+	uint8_t EmptyPosition = 0xFF;
 	for(uint8_t i=0; i<6; i++) {
-		if(Report.KeyCode[i] == 0) {
-			Report.KeyCode[i] = KeyCode;
-			HasChanged = true;
-			ISendInReportI();
+		if(LastReport.KeyCode[i] == KeyCode) {
+			AlreadyPressed = true;
 			break;
 		}
+		// Find empty slot
+		else if(LastReport.KeyCode[i] == 0 and EmptyPosition == 0xFF) EmptyPosition = i;
+	}
+	if(!AlreadyPressed and EmptyPosition < 6) {
+		LastReport.KeyCode[EmptyPosition] = KeyCode;
+		IReports.Put(&LastReport);
+		ISendInReportI();
 	}
 	chSysUnlock();
 }
 void UsbKBrd_t::DepressKey(uint8_t KeyCode) {
 	chSysLock();
 	for(uint8_t i=0; i<6; i++) {
-		if(Report.KeyCode[i] == KeyCode) {
-			Report.KeyCode[i] = 0;
-			HasChanged = true;
+		if(LastReport.KeyCode[i] == KeyCode) {
+			LastReport.KeyCode[i] = 0;
+			IReports.Put(&LastReport);
 			ISendInReportI();
 			break;
 		}
 	}
 	chSysUnlock();
 }
+
+void UsbKBrd_t::PressAndRelease(uint8_t KeyCode) {
+	PressKey(KeyCode);
+	DepressKey(KeyCode);
+}
+#endif

@@ -12,6 +12,9 @@
 #include "string.h" // for memcpy
 #include <kl_lib.h>
 
+// Lib version
+#define KL_BUF_VERSION      "20151102_1339"
+
 enum AddRslt_t {addrOk, addrFail, addrSwitch};
 
 // Simple buffer
@@ -28,20 +31,37 @@ protected:
     T IBuf[Sz], *PRead=IBuf, *PWrite=IBuf;
 public:
     uint8_t Get(T *p) {
-        if(IFullSlotsCount == 0) return FAILURE;
+        if(IFullSlotsCount == 0) return EMPTY;
         memcpy(p, PRead, sizeof(T));
         if(++PRead > (IBuf + Sz - 1)) PRead = IBuf;     // Circulate buffer
         IFullSlotsCount--;
         return OK;
     }
-
-    uint8_t Put(T *p) {
-        if(IFullSlotsCount >= Sz) return FAILURE;
-        memcpy(PWrite, p, sizeof(T));
-        if(++PWrite > (IBuf + Sz - 1)) PWrite = IBuf;   // Circulate buffer
-        IFullSlotsCount++;
+    uint8_t GetPAndMove(T **pp) {
+    	if(IFullSlotsCount == 0) return EMPTY;
+    	*pp = PRead;
+        if(++PRead > (IBuf + Sz - 1)) PRead = IBuf;     // Circulate buffer
+        IFullSlotsCount--;
         return OK;
     }
+    uint8_t GetLastP(T **pp) {
+    	if(IFullSlotsCount == 0) return EMPTY;
+		*pp = PRead;
+		return OK;
+    }
+
+    uint8_t PutAnyway(T *p) {
+		memcpy(PWrite, p, sizeof(T));
+		if(++PWrite > (IBuf + Sz - 1)) PWrite = IBuf;   // Circulate buffer
+		if(IFullSlotsCount < Sz) IFullSlotsCount++;
+		return OK;
+	}
+    uint8_t Put(T *p) {
+        if(IFullSlotsCount >= Sz) return OVERFLOW;
+        return PutAnyway(p);
+    }
+
+    inline bool IsEmpty() { return (IFullSlotsCount == 0); }
     inline uint32_t GetEmptyCount() { return Sz-IFullSlotsCount; }
     inline uint32_t GetFullCount()  { return IFullSlotsCount; }
     void Flush(uint32_t ALength) {

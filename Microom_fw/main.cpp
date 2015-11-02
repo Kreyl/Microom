@@ -55,7 +55,6 @@ __attribute__ ((__noreturn__))
 void App_t::ITask() {
     TmrSampling.Init(PThread, MS2ST(999), EVTMSK_SAMPLING, tvtPeriodic);
 
-
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
 #if 1 // ==== USB ====
@@ -74,7 +73,7 @@ void App_t::ITask() {
         }
 
         if(EvtMsk & EVTMSK_SAMPLING) {
-        	UsbKBrd.PressKey(HID_KEYBOARD_SC_A);
+        	UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
         }
     } // while true
 }

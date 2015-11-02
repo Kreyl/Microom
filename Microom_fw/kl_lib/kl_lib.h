@@ -15,7 +15,7 @@
 #include "clocking.h"
 
 // Lib version
-#define KL_LIB_VERSION      "20150908_0055"
+#define KL_LIB_VERSION      "20151102_1339"
 
 #if defined STM32L1XX_MD
 #include "stm32l1xx.h"
@@ -53,7 +53,7 @@
 #define CMD_ERROR       7
 #define WRITE_PROTECT   8
 #define CMD_UNKNOWN     9
-#define EMPTY_STRING    10
+#define EMPTY           10
 #define NOT_A_NUMBER    11
 #define OVERFLOW        12
 
