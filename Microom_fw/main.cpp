@@ -10,6 +10,7 @@
 #include "math.h"
 #include "leds.h"
 #include "filter.h"
+#include "kl_adc.h"
 
 App_t App;
 
@@ -37,15 +38,18 @@ int main(void) {
     if(ClkResult != 0) Uart.Printf("\rXTAL failure");
 
     App.InitThread();
-    // Leds
-    for(uint8_t i=0; i<9; i++) Led[i].Init();
+  	Led[0].Init();
+
+    Adc.Init();
+    PinSetupAnalog(GPIOC, 0);
+    PinSetupAnalog(GPIOC, 1);
 
     // Debug: init CS2 as output
 //    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
 
     // ==== USB ====
-    UsbKBrd.Init();
-    UsbKBrd.Connect();
+//    UsbKBrd.Init();
+//    UsbKBrd.Connect();
 
     // Main cycle
     App.ITask();
@@ -53,7 +57,7 @@ int main(void) {
 
 __attribute__ ((__noreturn__))
 void App_t::ITask() {
-    TmrSampling.Init(PThread, MS2ST(999), EVTMSK_SAMPLING, tvtPeriodic);
+    TmrSampling.InitAndStart(PThread, MS2ST(153), EVTMSK_SAMPLING, tvtPeriodic);
 
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
@@ -72,8 +76,17 @@ void App_t::ITask() {
             Uart.SignalCmdProcessed();
         }
 
+        // ==== ADC ====
         if(EvtMsk & EVTMSK_SAMPLING) {
-        	UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
+//        	UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
+        	Adc.StartMeasurement();
+        }
+        if(EvtMsk & EVTMSK_ADC_DONE) {
+         	uint32_t Sns0 = Adc.GetResult(SNS_CHNL0);
+         	uint32_t Sns1 = Adc.GetResult(SNS_CHNL1);
+         	Uart.Printf("\r%u; %u", Sns0, Sns1);
+
+
         }
     } // while true
 }
@@ -85,15 +98,6 @@ void App_t::OnCmd(Shell_t *PShell) {
     Uart.Printf("\r%S\r", PCmd->Name);
     // Handle command
     if(PCmd->NameIs("Ping")) PShell->Ack(OK);
-
-    else if(PCmd->NameIs("Act")) {
-    	TmrSampling.Start();
-    	PShell->Ack(OK);
-    }
-    else if(PCmd->NameIs("Deact")) {
-    	TmrSampling.Stop();
-    	PShell->Ack(OK);
-    }
 
     else PShell->Ack(CMD_UNKNOWN);
 }
