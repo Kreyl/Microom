@@ -189,7 +189,7 @@ extern void PrintfC(const char *format, ...);
 
 // Handles the GET_DESCRIPTOR callback. All required descriptors must be handled here
 const USBDescriptor *GetDescriptor(USBDriver *usbp, uint8_t dtype, uint8_t dindex, uint16_t lang) {
-    PrintfC("\rGetDsc: t=%u; i=%u", dtype, dindex);
+//    PrintfC("\rGetDsc: t=%u; i=%u", dtype, dindex);
     switch(dtype) {
         case USB_DESCRIPTOR_DEVICE:
             return &DeviceDescriptor;

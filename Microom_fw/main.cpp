@@ -49,8 +49,8 @@ int main(void) {
 //    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
 
     // ==== USB ====
-//    UsbKBrd.Init();
-//    UsbKBrd.Connect();
+    UsbKBrd.Init();
+    UsbKBrd.Connect();
 
     // Main cycle
     App.ITask();
@@ -79,7 +79,6 @@ void App_t::ITask() {
 
         // ==== ADC ====
         if(EvtMsk & EVTMSK_SAMPLING) {
-//        	UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
         	Adc.StartMeasurement();
         }
         if(EvtMsk & EVTMSK_ADC_DONE) {
@@ -113,6 +112,7 @@ void App_t::ProcessValues(uint32_t Sns0, uint32_t Sns1) {
 		} // for
 		if(IsLike) {
 			Uart.Printf("\rGest");
+			UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
 		}
  	} // if changed
 }

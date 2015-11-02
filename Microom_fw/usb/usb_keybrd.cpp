@@ -55,7 +55,7 @@ const USBConfig UsbCfg = {
 };
 
 void OnUsbEvent(USBDriver *usbp, usbevent_t event) {
-	Uart.PrintfI("\rUSB evt=%X", event);
+//	Uart.PrintfI("\rUSB evt=%X", event);
     switch (event) {
         case USB_EVENT_RESET:
             return;
@@ -94,7 +94,7 @@ bool OnSetupPkt(USBDriver *usbp) {
     SetupPkt_t *Setup = (SetupPkt_t*)usbp->setup;
 //    Uart.PrintfI("\rSetup: %A", usbp->setup, 8, ' ');
     if((Setup->bmRequestType & USB_RTYPE_TYPE_MASK) == USB_RTYPE_TYPE_CLASS) {
-    	Uart.PrintfI("\rSetup: %A", usbp->setup, 8, ' ');
+//    	Uart.PrintfI("\rSetup: %A", usbp->setup, 8, ' ');
     	switch(Setup->bRequest) {
     		// This request is mandatory and must be supported by all devices
     		case HID_REQ_GetReport:
@@ -105,7 +105,7 @@ bool OnSetupPkt(USBDriver *usbp) {
     			}
     			break;
     		case HID_REQ_SetReport:
-    			Uart.PrintfI("\rSetRep Len = %u", Setup->wLength);
+//    			Uart.PrintfI("\rSetRep Len = %u", Setup->wLength);
     			return true;
     			break;
     		// This request is required only for boot devices
