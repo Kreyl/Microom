@@ -8,6 +8,8 @@
 #include "kl_adc.h"
 #include "main.h"
 
+#if ADC_ENABLED
+
 Adc_t Adc;
 
 // Wrapper for IRQ
@@ -105,3 +107,5 @@ uint32_t Adc_t::GetResult(uint8_t AChannel) {
     for(uint32_t i = Start; i < Stop; i++) Rslt += IBuf[i];
     return Rslt / ADC_SAMPLE_CNT;
 }
+
+#endif // ADC_ENABLED

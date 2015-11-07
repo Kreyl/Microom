@@ -164,14 +164,14 @@ void chDbgPanic(const char *msg1) {
 
 #if I2C_KL // ============================= I2C =====================================
 void i2cDmaIrqHandler(void *p, uint32_t flags) {
-    chSysLockFromIsr();
+    chSysLockFromISR();
 //    Uart.PrintfI("\r===T===");
-    Thread *PThd = reinterpret_cast<i2c_t*>(p)->PRequestingThread;
+    thread_t *PThd = reinterpret_cast<i2c_t*>(p)->PRequestingThread;
     if(PThd != nullptr) {
         reinterpret_cast<i2c_t*>(p)->PRequestingThread = nullptr;
         chSchReadyI(PThd);
     }
-    chSysUnlockFromIsr();
+    chSysUnlockFromISR();
 }
 
 void i2c_t::Init() {
@@ -179,7 +179,7 @@ void i2c_t::Init() {
     Resume();
     // ==== DMA ====
     // Here only unchanged parameters of the DMA are configured.
-#ifdef STM32F2XX
+#if defined STM32F2XX || defined STM32F4XX
     if      (ii2c == I2C1) DmaChnl = 1;
     else if (ii2c == I2C2) DmaChnl = 7;
     else                   DmaChnl = 3;   // I2C3
@@ -193,9 +193,9 @@ void i2c_t::Init() {
 void i2c_t::Standby() {
     if(ii2c == I2C1) { rccResetI2C1(); rccDisableI2C1(FALSE); }
 #ifdef RCC_APB1ENR_I2C2EN
-    else             { rccResetI2C2(); rccDisableI2C2(FALSE); }
+    else if (ii2c == I2C2) { rccResetI2C2(); rccDisableI2C2(FALSE); }
 #endif
-#if 0
+#ifdef RCC_APB1ENR_I2C3EN
     else if (ii2c == I2C3) { rccResetI2C3(); rccDisableI2C3(FALSE); }
 #endif
     // Disable GPIOs
@@ -212,6 +212,8 @@ void i2c_t::Resume() {
     if(ii2c == I2C1) { rccEnableI2C1(FALSE); rccResetI2C1(); }
 #ifdef RCC_APB1ENR_I2C2EN
     else if (ii2c == I2C2) { rccEnableI2C2(FALSE); rccResetI2C2(); }
+#endif
+#ifdef RCC_APB1ENR_I2C3EN
     else if (ii2c == I2C3) { rccEnableI2C3(FALSE); rccResetI2C3(); }
 #endif
     // Minimum clock is 2 MHz
@@ -242,52 +244,17 @@ void i2c_t::Reset() {
 uint8_t i2c_t::WriteRead(uint8_t Addr,
         uint8_t *WPtr, uint8_t WLength,
         uint8_t *RPtr, uint8_t RLength) {
-    if(IBusyWait() != OK) return FAILURE;
-    // Clear flags
-    ii2c->SR1 = 0;
-    while(RxIsNotEmpty()) (void)ii2c->DR;   // Read DR until it empty
-    ClearAddrFlag();
-    // Start transmission
-    SendStart();
-    if(WaitEv5() != OK) return FAILURE;
-    SendAddrWithWrite(Addr);
-    if(WaitEv6() != OK) { SendStop(); return FAILURE; }
-    ClearAddrFlag();
+    uint8_t r = IPrepareTransmission(Addr);
+    if(r != OK) return r;
     // Start TX DMA if needed
     if(WLength != 0) {
-        if(WaitEv8() != OK) return FAILURE;
-        dmaStreamSetMemory0(PDmaTx, WPtr);
-        dmaStreamSetMode   (PDmaTx, I2C_DMATX_MODE);
-        dmaStreamSetTransactionSize(PDmaTx, WLength);
-        chSysLock();
-        PRequestingThread = chThdSelf();
-        dmaStreamEnable(PDmaTx);
-        chSchGoSleepS(THD_STATE_SUSPENDED); // Sleep until end
-        chSysUnlock();
-        dmaStreamDisable(PDmaTx);
+        r = IWrite(WPtr, WLength);
+        if(r != OK) return r;
     }
     // Read if needed
     if(RLength != 0) {
-        if(WaitEv8() != OK) return FAILURE;
-        // Send repeated start
-        SendStart();
-        if(WaitEv5() != OK) return FAILURE;
-        SendAddrWithRead(Addr);
-        if(WaitEv6() != OK) { SendStop(); return FAILURE; }
-        // If single byte is to be received, disable ACK before clearing ADDR flag
-        if(RLength == 1) AckDisable();
-        else AckEnable();
-        ClearAddrFlag();
-        dmaStreamSetMemory0(PDmaRx, RPtr);
-        dmaStreamSetMode   (PDmaRx, I2C_DMARX_MODE);
-        dmaStreamSetTransactionSize(PDmaRx, RLength);
-        SignalLastDmaTransfer(); // Inform DMA that this is last transfer => do not ACK last byte
-        chSysLock();
-        PRequestingThread = chThdSelf();
-        dmaStreamEnable(PDmaRx);
-        chSchGoSleepS(THD_STATE_SUSPENDED); // Sleep until end
-        chSysUnlock();
-        dmaStreamDisable(PDmaRx);
+        r = IRead(RPtr, RLength, Addr);
+        if(r != OK) return r;
     } // if != 0
     else WaitBTF(); // if nothing to read, just stop
     SendStop();
@@ -297,84 +264,108 @@ uint8_t i2c_t::WriteRead(uint8_t Addr,
 uint8_t i2c_t::WriteWrite(uint8_t Addr,
         uint8_t *WPtr1, uint8_t WLength1,
         uint8_t *WPtr2, uint8_t WLength2) {
-    if(IBusyWait() != OK) return FAILURE;
-    // Clear flags
-    ii2c->SR1 = 0;
-    while(RxIsNotEmpty()) (void)ii2c->DR;   // Read DR until it empty
-    ClearAddrFlag();
-    // Start transmission
-    SendStart();
-    if(WaitEv5() != OK) return FAILURE;
-    SendAddrWithWrite(Addr);
-    if(WaitEv6() != OK) { SendStop(); return FAILURE; }
-    ClearAddrFlag();
+    uint8_t r = IPrepareTransmission(Addr);
+    if(r != OK) return r;
     // Start TX DMA if needed
     if(WLength1 != 0) {
-        if(WaitEv8() != OK) return FAILURE;
-        dmaStreamSetMemory0(PDmaTx, WPtr1);
-        dmaStreamSetMode   (PDmaTx, I2C_DMATX_MODE);
-        dmaStreamSetTransactionSize(PDmaTx, WLength1);
-        chSysLock();
-        PRequestingThread = chThdSelf();
-        dmaStreamEnable(PDmaTx);
-        chSchGoSleepS(THD_STATE_SUSPENDED); // Sleep until end
-        chSysUnlock();
-        dmaStreamDisable(PDmaTx);
+        r = IWrite(WPtr1, WLength1);
+        if(r != OK) return r;
     }
     if(WLength2 != 0) {
-        if(WaitEv8() != OK) return FAILURE;
-        dmaStreamSetMemory0(PDmaTx, WPtr2);
-        dmaStreamSetMode   (PDmaTx, I2C_DMATX_MODE);
-        dmaStreamSetTransactionSize(PDmaTx, WLength2);
-        chSysLock();
-        PRequestingThread = chThdSelf();
-        dmaStreamEnable(PDmaTx);
-        chSchGoSleepS(THD_STATE_SUSPENDED); // Sleep until end
-        chSysUnlock();
-        dmaStreamDisable(PDmaTx);
+        r = IWrite(WPtr2, WLength2);
+        if(r != OK) return r;
     }
     WaitBTF();
     SendStop();
     return OK;
 }
 
-uint8_t i2c_t::Write(uint8_t Addr, uint8_t *WPtr1, uint8_t WLength1) {
-    if(IBusyWait() != OK) return FAILURE;
-    // Clear flags
-    ii2c->SR1 = 0;
-    while(RxIsNotEmpty()) (void)ii2c->DR;   // Read DR until it empty
-    ClearAddrFlag();
-    // Start transmission
-    SendStart();
-    if(WaitEv5() != OK) return FAILURE;
-    SendAddrWithWrite(Addr);
-    if(WaitEv6() != OK) { SendStop(); return FAILURE; }
-    ClearAddrFlag();
+uint8_t i2c_t::Write(uint8_t Addr, uint8_t *WPtr, uint8_t WLength) {
+    uint8_t r = IPrepareTransmission(Addr);
+    if(r != OK) return r;
     // Start TX DMA if needed
-    if(WLength1 != 0) {
-        if(WaitEv8() != OK) return FAILURE;
-        dmaStreamSetMemory0(PDmaTx, WPtr1);
-        dmaStreamSetMode   (PDmaTx, I2C_DMATX_MODE);
-        dmaStreamSetTransactionSize(PDmaTx, WLength1);
-        chSysLock();
-        PRequestingThread = chThdSelf();
-        dmaStreamEnable(PDmaTx);
-        chSchGoSleepS(THD_STATE_SUSPENDED); // Sleep until end
-        chSysUnlock();
-        dmaStreamDisable(PDmaTx);
+    if(WLength != 0) {
+        r = IWrite(WPtr, WLength);
+        if(r != OK) return r;
     }
     WaitBTF();
     SendStop();
+    return r;
+}
+
+uint8_t i2c_t::IPrepareTransmission(uint8_t Addr) {
+    uint8_t r = IBusyWait();
+    if(r == OK) {
+        // Clear flags
+        ii2c->SR1 = 0;
+        while(RxIsNotEmpty()) (void)ii2c->DR;   // Read DR until it empty
+        ClearAddrFlag();
+        // Start transmission
+        SendStart();
+        r = WaitEv5();
+        if(r == OK) {
+            SendAddrWithWrite(Addr);
+            r = WaitEv6();
+            if(r == OK) ClearAddrFlag();
+            else SendStop();
+        }
+    }
+    return r;
+}
+
+// DMA-based read and write subroutines
+uint8_t i2c_t::IWrite(uint8_t *Ptr, uint8_t Length) {
+    uint8_t r = WaitEv8();
+    if(r != OK) return r;
+    dmaStreamSetMemory0(PDmaTx, Ptr);
+    dmaStreamSetMode   (PDmaTx, I2C_DMATX_MODE(DmaChnl));
+    dmaStreamSetTransactionSize(PDmaTx, Length);
+    chSysLock();
+    PRequestingThread = chThdGetSelfX();
+    dmaStreamEnable(PDmaTx);
+    chSchGoSleepS(CH_STATE_SUSPENDED); // Sleep until end
+    chSysUnlock();
+    dmaStreamDisable(PDmaTx);
     return OK;
 }
 
+uint8_t i2c_t::IRead(uint8_t *Ptr, uint8_t Length, uint8_t Addr) {
+    uint8_t r = WaitEv8();
+    if(r == OK) {
+        // Send repeated start
+        SendStart();
+        r = WaitEv5();
+        if(r == OK) {
+            SendAddrWithRead(Addr);
+            r = WaitEv6();
+            if(r == OK) {
+                // If single byte is to be received, disable ACK before clearing ADDR flag
+                if(Length == 1) AckDisable();
+                else AckEnable();
+                ClearAddrFlag();
+                dmaStreamSetMemory0(PDmaRx, Ptr);
+                dmaStreamSetMode   (PDmaRx, I2C_DMARX_MODE(DmaChnl));
+                dmaStreamSetTransactionSize(PDmaRx, Length);
+                SignalLastDmaTransfer(); // Inform DMA that this is last transfer => do not ACK last byte
+                chSysLock();
+                PRequestingThread = chThdGetSelfX();
+                dmaStreamEnable(PDmaRx);
+                chSchGoSleepS(CH_STATE_SUSPENDED); // Sleep until end
+                chSysUnlock();
+                dmaStreamDisable(PDmaRx);
+            } // WaitEv6
+            else SendStop();
+        } // WaitEv5
+    } // WaitEv8
+    return r;
+}
 
-void i2c_t::BusScan() {
+void i2c_t::ScanBus() {
     Uart.Printf("\r     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f");
     uint8_t AddrHi, Addr;
     for(AddrHi = 0; AddrHi < 0x80; AddrHi += 0x10) {
         Uart.Printf("\r%02X: ", AddrHi);
-        for(uint8_t n=0; n<0x10; n++) {
+        for(uint8_t n=0; n < 0x10; n++) {
             Addr = AddrHi + n;
             if(Addr <= 0x01 or Addr > 0x77) Uart.Printf("   ");
             else {
@@ -392,6 +383,7 @@ void i2c_t::BusScan() {
                 else Uart.Printf("__ ");
                 SendStop();
             }
+            chThdSleepMilliseconds(11);
         } // for n
     } // for AddrHi
 }
@@ -405,6 +397,7 @@ uint8_t i2c_t::IBusyWait() {
         chThdSleepMilliseconds(1);
     }
     Error = true;
+    Uart.Printf("\rErr: I2C Busy");
     return TIMEOUT;
 }
 
@@ -421,11 +414,12 @@ uint8_t i2c_t::WaitEv5() {
 }
 
 uint8_t i2c_t::WaitEv6() {
-    uint32_t RetryCnt = 45;
+    uint32_t RetryCnt = Clk.APB1FreqHz / 62500; // == / 1000000 * 16
     uint16_t Flag1;
     do {
         Flag1 = ii2c->SR1;
-        if((RetryCnt-- == 0) or (Flag1 & I2C_SR1_AF)) return FAILURE;   // Fail if timeout or NACK
+        if(RetryCnt-- == 0) return TIMEOUT;     // Fail if Timeout
+        if(Flag1 & I2C_SR1_AF) return FAILURE;  // Fail if NACK
     } while(!(Flag1 & I2C_SR1_ADDR)); // ADDR set when Address is sent and ACK received
     return OK;
 }

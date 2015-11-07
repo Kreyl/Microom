@@ -20,7 +20,7 @@
 #define APP_VERSION         __DATE__ " " __TIME__
 
 #define SNS_VALUE_THRESHOLD		1530
-#define SAMPLING_INTERVAL_MS	11
+#define SAMPLING_INTERVAL_MS	999
 
 // Sns state
 struct SnsState_t {

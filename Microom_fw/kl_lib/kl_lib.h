@@ -793,9 +793,10 @@ public:
 };
 #endif
 
-#if 0 // ============================== I2C ====================================
+#if 1 // ============================== I2C ====================================
 #define I2C_KL  TRUE
-#define I2C_DMATX_MODE  STM32_DMA_CR_CHSEL(DmaChnl) |   \
+#define I2C_DMATX_MODE(Chnl)    \
+                        STM32_DMA_CR_CHSEL(Chnl) |   \
                         DMA_PRIORITY_LOW | \
                         STM32_DMA_CR_MSIZE_BYTE | \
                         STM32_DMA_CR_PSIZE_BYTE | \
@@ -803,7 +804,8 @@ public:
                         STM32_DMA_CR_DIR_M2P |  /* Direction is memory to peripheral */ \
                         STM32_DMA_CR_TCIE       /* Enable Transmission Complete IRQ */
 
-#define I2C_DMARX_MODE  STM32_DMA_CR_CHSEL(DmaChnl) |   \
+#define I2C_DMARX_MODE(Chnl)    \
+                        STM32_DMA_CR_CHSEL(Chnl) |   \
                         DMA_PRIORITY_LOW | \
                         STM32_DMA_CR_MSIZE_BYTE | \
                         STM32_DMA_CR_PSIZE_BYTE | \
@@ -813,7 +815,7 @@ public:
 
 class i2c_t {
 private:
-#ifdef STM32F2XX
+#if defined STM32F2XX || defined STM32F4XX
     uint16_t DmaChnl;
 #else
 #define DmaChnl     0   // dummy
@@ -843,26 +845,32 @@ private:
     uint8_t WaitRx();
     uint8_t WaitStop();
     uint8_t WaitBTF();
+    // DMA-based read and write subroutines
+    uint8_t IPrepareTransmission(uint8_t Addr);
+    uint8_t IWrite(uint8_t *Ptr, uint8_t Length);
+    uint8_t IRead(uint8_t *Ptr, uint8_t Length, uint8_t Addr);
 public:
     bool Error;
-    Thread *PRequestingThread;
+    thread_t *PRequestingThread;
     const stm32_dma_stream_t *PDmaTx, *PDmaRx;
     void Init();
     void Standby();
     void Resume();
     void Reset();
-    void BusScan();
+    void ScanBus();
     uint8_t WriteRead(uint8_t Addr, uint8_t *WPtr, uint8_t WLength, uint8_t *RPtr, uint8_t RLength);
-    uint8_t WriteWrite(uint8_t Addr, uint8_t *WPtr1, uint8_t WLength1, uint8_t *WPtr2, uint8_t WLength2);
-    uint8_t Write(uint8_t Addr, uint8_t *WPtr1, uint8_t WLength1);
+    uint8_t WriteWrite(uint8_t Addr, uint8_t *WPtr1, uint8_t WLength1, uint8_t *WPtr2 = nullptr, uint8_t WLength2 = 0);
+    uint8_t Write(uint8_t Addr, uint8_t *WPtr, uint8_t WLength);
     i2c_t(I2C_TypeDef *pi2c,
             GPIO_TypeDef *PGpio, uint16_t SclPin, uint16_t SdaPin,
             uint32_t BitrateHz,
             const stm32_dma_stream_t *APDmaTx, const stm32_dma_stream_t *APDmaRx) :
+#if defined STM32F2XX || defined STM32F4XX
+                DmaChnl(0),
+#endif
                 ii2c(pi2c), IPGpio(PGpio), ISclPin(SclPin), ISdaPin(SdaPin), IBitrateHz(BitrateHz),
                 Error(false), PRequestingThread(nullptr),
                 PDmaTx(APDmaTx), PDmaRx(APDmaRx) {}
-
 };
 #endif
 

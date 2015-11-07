@@ -49,6 +49,20 @@
 #define USB_DP_PIN		12
 #endif
 
+// APDS-9960
+#define APDS_I2C_GPIO	GPIOB
+#define APDS_SCL_PIN	8
+#define APDS_SDA_PIN	9
+#define APDS_INT_GPIO	GPIOC
+#define APDS_INT_PIN	0
+
+#if 1 // =========================== I2C =======================================
+#define APDS_ADDR           0x39
+#define APDS_I2C            I2C1
+#define APDS_I2C_BITRATE_HZ 100000
+
+#endif
+
 #if 1 // =========================== SPI =======================================
 
 #endif
@@ -65,37 +79,14 @@
 #define UART_DMA_RX     STM32_DMA2_STREAM5
 #define UART_DMA_CHNL   4
 
-// ADC
-#define ADC_DMA         STM32_DMA2_STREAM4
-#define ADC_DMA_MODE    STM32_DMA_CR_CHSEL(0) |   /* DMA2 Stream4 Channel0 */ \
-                        DMA_PRIORITY_LOW | \
-                        STM32_DMA_CR_MSIZE_HWORD | \
-                        STM32_DMA_CR_PSIZE_HWORD | \
-                        STM32_DMA_CR_MINC |       /* Memory pointer increase */ \
-                        STM32_DMA_CR_DIR_P2M |    /* Direction is peripheral to memory */ \
-                        STM32_DMA_CR_TCIE         /* Enable Transmission Complete IRQ */
+// APDS
+#define APDS_DMA_TX     STM32_DMA1_STREAM6
+#define APDS_DMA_RX     STM32_DMA1_STREAM0
 
 #endif
 
-#if 1 // =========================== ADC =======================================
-// Clock divider: clock is generated from the APB2
-#define ADC_CLK_DIVIDER		adcDiv2	// 32MHz / 2 = 16MHz
-
-// ADC channels: LED3, LED6
-#define SNS_CHNL0 	        10
-#define SNS_CHNL1 	        11
-
-#define ADC_VREFINT_CHNL    17  // All 4xx devices. Do not change.
-const uint8_t AdcChannels[] = { SNS_CHNL0, SNS_CHNL1 };
-#define ADC_CHANNEL_CNT     2   // Do not use countof(AdcChannels) as preprocessor does not know what is countof => cannot check
-#define ADC_SAMPLE_TIME     ast55d5Cycles
-#define ADC_SAMPLE_CNT      8   // How many times to measure every channel
-
-#define ADC_MAX_SEQ_LEN     16  // 1...16	// Const, see ref man
-#define ADC_SEQ_LEN         (ADC_SAMPLE_CNT * ADC_CHANNEL_CNT)
-#if (ADC_SEQ_LEN > ADC_MAX_SEQ_LEN) || (ADC_SEQ_LEN == 0)
-#error "Wrong ADC channel count and sample count"
-#endif
+#if 0 // ============================== ADC ====================================
+#define ADC_ENABLED     TRUE
 #endif
 
 #endif /* BOARD_H_ */

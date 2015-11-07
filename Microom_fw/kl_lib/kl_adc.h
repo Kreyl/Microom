@@ -12,6 +12,8 @@
 #include "clocking.h"
 #include "board.h"
 
+#if ADC_ENABLED
+
 #ifdef STM32F4XX
 // =========================== Constants and Types =============================
 
@@ -58,5 +60,7 @@ public:
 #endif // f4xx
 
 extern Adc_t Adc;
+
+#endif // ADC_ENABLED
 
 #endif /* KL_ADC_H_ */
