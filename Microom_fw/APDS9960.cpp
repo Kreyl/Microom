@@ -7,12 +7,13 @@
 
 #include "apds9960.h"
 
+#if 1 // ==== Init values ====
 static const RegValue_t InitValues[] = {
         {APDS_REG_ENABLE, 0},       // Disable all features
         // Default values for ambient light and proximity registers
         {APDS_REG_ATIME, 219},      // 103ms
         {APDS_REG_WTIME, 246},      // 27ms
-        {APDS_REG_PPULSE, 0x87},    // 16us, 8 pulses
+        {APDS_REG_PPULSE, DEFAULT_GESTURE_PPULSE},
         {APDS_REG_POFFSET_UR, 0},   // 0 offset
         {APDS_REG_POFFSET_DL, 0},   // 0 offset
         {APDS_REG_CONFIG1, 0x60},   // No 12x wait (WTIME) factor
@@ -33,6 +34,7 @@ static const RegValue_t InitValues[] = {
         {APDS_REG_GCONF3, 0},       // All photodiodes active during gesture
 };
 #define INIT_VALUES_CNT     countof(InitValues)
+#endif
 
 uint8_t APDS9960_t::Init() {
     ii2c.Init();
@@ -73,7 +75,59 @@ uint8_t APDS9960_t::Init() {
     return OK;
 }
 
+uint8_t APDS9960_t::EnableGestureSns() {
+    uint8_t r;
+    ResetGestureParameters();
+    if((r = WriteReg({APDS_REG_WTIME, 0xFF})) != OK) return r;
+    if((r = WriteReg({APDS_REG_PPULSE, DEFAULT_GESTURE_PPULSE})) != OK) return r;
+    if((r = SetLedBoost(lbst300)) != OK) return r;
+    if((r = EnableGestureMode()) != OK) return r;
+    if((r = EnablePower()) != OK) return r;
+    return EnableMode(MODE_WAIT | MODE_PROXIMITY | MODE_GESTURE);
+}
+
+bool APDS9960_t::IsGestureAvailable() {
+    uint8_t b=0, r;
+    if((r = ReadReg(APDS_REG_GSTATUS, &b)) != OK) return false;
+    return (b & APDS_BIT_GVALID);
+}
+
+Gesture_t APDS9960_t::ReadGesture() {
+    uint8_t b=0, r, FifoLvl=0;
+    while(true) {
+        // Check if there is data
+        if((r = ReadReg(APDS_REG_GSTATUS, &b)) != OK) break;
+        if(b & APDS_BIT_GVALID) {
+            // Get FIFO level
+            if((r = ReadReg(APDS_REG_GFLVL, &FifoLvl)) != OK) break;
+            Uart.Printf("\rFifoLvl=%u", FifoLvl);
+            if(FifoLvl > 0) {
+                if((r = ReadFifo(FifoLvl)) != OK) break;
+                for(uint8_t i=0; i<FifoLvl; i++) {
+                    Uart.Printf("\r%u %u %u %u", InputData[i].U, InputData[i].D, InputData[i].L, InputData[i].R);
+                }
+            }
+
+
+            break;
+        }
+    } // while true
+    return gstNone;
+}
+
+void APDS9960_t::ResetGestureParameters() {
+
+}
+
 #if 1 // ====================== Auxilary subroutines ===========================
+uint8_t APDS9960_t::EnableMode(uint8_t Mode) {
+    uint8_t b=0, r;
+    if((r = ReadReg(APDS_REG_ENABLE, &b)) != OK) return r;
+    // Set bits in register to given value
+    b |= Mode;
+    return WriteReg({APDS_REG_ENABLE, b});
+}
+
 uint8_t APDS9960_t::SetLedDrv(LedDrvValue_t Value) {
     uint8_t b=0, r;
     if((r = ReadReg(APDS_REG_CONTROL, &b)) != OK) return r;
@@ -141,6 +195,23 @@ uint8_t APDS9960_t::DisableGestureIrq() {
     if((r = ReadReg(APDS_REG_GCONF4, &b)) != OK) return r;
     // Set bits in register to given value
     b &= 0b11111101;
+    return WriteReg({APDS_REG_GCONF4, b});
+}
+
+uint8_t APDS9960_t::SetLedBoost(LedBoost_t Boost) {
+    uint8_t b=0, r;
+    if((r = ReadReg(APDS_REG_CONFIG2, &b)) != OK) return r;
+    // Set bits in register to given value
+    b &= 0b11001111;
+    b |= (uint8_t)Boost;
+    return WriteReg({APDS_REG_CONFIG2, b});
+}
+
+uint8_t APDS9960_t::EnableGestureMode() {
+    uint8_t b=0, r;
+    if((r = ReadReg(APDS_REG_GCONF4, &b)) != OK) return r;
+    // Set bits in register to given value
+    b |= 1;
     return WriteReg({APDS_REG_GCONF4, b});
 }
 

@@ -63,9 +63,13 @@
 #define APDS_REG_GFIFO_D        0xFD
 #define APDS_REG_GFIFO_L        0xFE
 #define APDS_REG_GFIFO_R        0xFF
+
+// Bits
+#define APDS_BIT_GVALID         0x01
 #endif
 
 #if 1 // ==== Default values ====
+#define DEFAULT_GESTURE_PPULSE  0x89    // 16us, 10 pulses
 #define DEFAULT_LDRIVE          ldv100mA
 #define DEFAULT_PGAIN           pgv4x
 #define DEFAULT_AGAIN           agv4x
@@ -78,7 +82,17 @@
 #endif
 
 #if 1 // Constants
-#define APDS_MODE_ALL_OFF       0
+// Modes
+#define MODE_ALL_OFF            0
+#define MODE_POWER              (1<<0)
+#define MODE_ALS                (1<<1)
+#define MODE_PROXIMITY          (1<<2)
+#define MODE_WAIT               (1<<3)
+#define MODE_AIEN               (1<<4)
+#define MODE_PIEN               (1<<5)
+#define MODE_GESTURE            (1<<6)
+
+#define MAX_FIFO_CNT            32  // Const, do not touch
 
 // LED Drive values
 enum LedDrvValue_t {
@@ -86,6 +100,13 @@ enum LedDrvValue_t {
     ldv50mA   = 1,
     ldv25mA   = 2,
     ldv12_5mA = 3
+};
+
+enum LedBoost_t {
+    lbst100 = (0<<4),
+    lbst150 = (1<<4),
+    lbst200 = (2<<4),
+    lbst300 = (3<<4),
 };
 
 // Proximity Gain (PGAIN) values
@@ -123,26 +144,33 @@ enum GestWTime_t {
     gwTime30_8ms = 6,
     gwTime39_2ms = 7
 };
+
+enum Gesture_t {
+    gstNone, gstUp, gstDown, gstLeft, gstRight
+};
 #endif
 
 struct RegValue_t {
     uint8_t Reg, Value;
 } __attribute__((packed));
-#define REG_VALUE_SZ    sizeof(RegValue_t)
+#define REG_VALUE_SZ    2
+
+struct InputData_t {
+    uint8_t U, D, L, R;
+} __attribute__((packed));
+#define IN_DATA_SZ      4
 
 class APDS9960_t {
 private:
+    InputData_t InputData[MAX_FIFO_CNT];
     i2c_t ii2c = {APDS_I2C, APDS_I2C_GPIO, APDS_SCL_PIN, APDS_SDA_PIN,
             APDS_I2C_BITRATE_HZ, APDS_DMA_TX, APDS_DMA_RX};
     uint8_t ReadReg(uint8_t Reg, uint8_t *p) { return ii2c.WriteRead(APDS_ADDR, &Reg, 1, p, 1); }
     uint8_t WriteReg(RegValue_t RV) {
-//        uint8_t b[2];
-//        b[0] = Reg;
-//        b[1] = Byte;
-        Uart.Printf("\rWReg: %02X %02X", RV.Reg, RV.Value);
+//        Uart.Printf("\rWReg: %02X %02X", RV.Reg, RV.Value);
         return ii2c.Write(APDS_ADDR, (uint8_t*)&RV, REG_VALUE_SZ);
     }
-    uint8_t SetMode(uint8_t Mode) { return WriteReg({APDS_REG_ENABLE, Mode}); }
+    uint8_t EnableMode(uint8_t Mode);
     uint8_t SetLedDrv(LedDrvValue_t Value);
     uint8_t SetProximityGain(ProxGainValue_t Gain);
     uint8_t SetAmbientLightGain(AmbGainValue_t Gain);
@@ -154,10 +182,21 @@ private:
     uint8_t SetGestureLEDDrive(LedDrvValue_t Value);
     uint8_t SetGestureWaitTime(GestWTime_t Time);
     uint8_t EnableGestureIrq();
+    uint8_t EnableGestureMode();
+    uint8_t EnablePower() { return EnableMode(MODE_POWER); }
     uint8_t DisableGestureIrq();
-
+    uint8_t SetLedBoost(LedBoost_t Boost);
+    // Data manipulation
+    void ResetGestureParameters();
+    uint8_t ReadFifo(uint8_t Count) {
+        uint8_t Addr = APDS_REG_GFIFO_U;
+        return ii2c.WriteRead(APDS_ADDR, &Addr, 1, (uint8_t*)InputData, (Count * IN_DATA_SZ));
+    }
 public:
     uint8_t Init();
+    uint8_t EnableGestureSns();
+    bool IsGestureAvailable();
+    Gesture_t ReadGesture();
 };
 
 #endif /* APDS9960_H_ */

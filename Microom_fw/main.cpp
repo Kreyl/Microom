@@ -10,7 +10,6 @@
 #include "math.h"
 #include "leds.h"
 #include "filter.h"
-#include "apds9960.h"
 
 App_t App;
 APDS9960_t Apds;
@@ -43,6 +42,7 @@ int main(void) {
   	Led[1].Init();
 
   	Apds.Init();
+  	if(Apds.EnableGestureSns() != OK) Uart.Printf("\rGesture Sns Failure");
 
     // Debug: init CS2 as output
 //    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
@@ -78,38 +78,18 @@ void App_t::ITask() {
 
         // ==== Sensor ====
         if(EvtMsk & EVTMSK_SAMPLING) {
-//            Apds.Init();
+            if(Apds.IsGestureAvailable()) {
+                ProcessValues(Apds.ReadGesture());
+            }
 //            Uart.Printf("\rp");
         }
     } // while true
 }
 
 #if 1 // ======================= Signal processing =============================
-void App_t::ProcessValues(uint32_t Sns0, uint32_t Sns1) {
-// 	Uart.Printf("\r%u; %u", Sns0, Sns1);
-// 	SnsState_t Current;
-// 	Current.St0 = (Sns0 > SNS_VALUE_THRESHOLD)? 1 : 0;
-// 	Current.St1 = (Sns1 > SNS_VALUE_THRESHOLD)? 1 : 0;
-// 	if(Current.St0 == 0 and Current.St1 == 0) return; // ignore "nothing" info
-// 	// Check if changed
-// 	if(Current != IBuf[0]) {
-// 		// Shift buffer
-// 		for(uint32_t i=(BUF_CNT-1); i>0; i--) IBuf[i] = IBuf[i-1];
-//		IBuf[0] = Current;	// Put new value into the buf
-////		Uart.Printf("\rBuf:"); for(uint32_t i=0; i<GESTURE_LEN; i++) Uart.Printf(" %d %d;", IBuf[i].St0, IBuf[i].St1);
-//		// ==== Compare gesture sequence ====
-//		bool IsLike = true;
-//		for(uint32_t i=0; i<GESTURE_LEN; i++) {
-//			if(IBuf[i] != Gesture[GESTURE_LEN - 1 - i]) {
-//				IsLike = false;
-//				break;
-//			}
-//		} // for
-//		if(IsLike) {
-//			Uart.Printf("\rGest");
+void App_t::ProcessValues(Gesture_t Gesture) {
+ 	Uart.Printf("\rGst=%u", Gesture);
 //			UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
-//		}
-// 	} // if changed
 }
 #endif
 
