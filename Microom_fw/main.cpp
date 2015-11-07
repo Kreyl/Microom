@@ -78,7 +78,7 @@ void App_t::ITask() {
 
         // ==== Sensor ====
         if(EvtMsk & EVTMSK_SAMPLING) {
-            Apds.Ping();
+//            Apds.Init();
 //            Uart.Printf("\rp");
         }
     } // while true
