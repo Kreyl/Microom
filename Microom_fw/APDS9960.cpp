@@ -24,7 +24,7 @@ static const RegValue_t InitValues[] = {
         {APDS_REG_CONFIG2, 0x01},   // No saturation interrupts or LED boost
         {APDS_REG_CONFIG3, 0},      // Enable all photodiodes, no SAI
         // Default values for gesture sense registers
-        {APDS_REG_GPENTH, 40},      // Threshold for entering gesture mode
+        {APDS_REG_GPENTH, 36},      // Threshold for entering gesture mode
         {APDS_REG_GEXTH, 30},       // Threshold for exiting gesture mode
         {APDS_REG_GCONF1, 0x40},    // 4 gesture events for int., 1 for exit
         {APDS_REG_GOFFSET_U, 0},    // No offset scaling for gesture mode

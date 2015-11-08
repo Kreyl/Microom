@@ -47,8 +47,8 @@ int main(void) {
 //    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
 
     // ==== USB ====
-//    UsbKBrd.Init();
-//    UsbKBrd.Connect();
+    UsbKBrd.Init();
+    UsbKBrd.Connect();
 
     // Main cycle
     App.ITask();
@@ -84,13 +84,23 @@ void App_t::ITask() {
 #if 1 // ======================= Signal processing =============================
 void App_t::ProcessValues(Gesture_t Gesture) {
     switch(Gesture) {
-        case gstUp:    Uart.Printf("Gst Up\r"); break;
-        case gstDown:  Uart.Printf("Gst Down\r"); break;
-        case gstLeft:  Uart.Printf("Gst Left\r"); break;
-        case gstRight: Uart.Printf("Gst Right\r"); break;
-        case gstNone:  Uart.Printf("Gst None\r"); break;
+        case gstUp:
+            Uart.Printf("Gst Up\r");
+            UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
+            break;
+        case gstDown:
+            Uart.Printf("Gst Down\r");
+            break;
+        case gstLeft:
+            Uart.Printf("Gst Left\r");
+            break;
+        case gstRight:
+            Uart.Printf("Gst Right\r");
+            break;
+        case gstNone:
+            Uart.Printf("Gst None\r");
+            break;
     }
-//			UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
 }
 #endif
 
