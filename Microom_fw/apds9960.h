@@ -164,21 +164,23 @@ union InputData_t {
 #define IN_DATA_SZ      4
 
 #if 1 // ==== Gesture recognition ====
-#define TOO_OLD_INTERVAL_MS     4005
-#define FILTER_LEN              9
-#define LOW_THRESHOLD           11
-#define HIGH_THRESHOLD          36
+#define LOW_THRESHOLD           36
+#define HIGH_THRESHOLD          72
+
 class GestData_t {
 private:
-    uint32_t Indx;
-    InputData_t Buf[FILTER_LEN];
-
+    uint8_t PrevU=0, PrevD=0;
+    uint32_t CntU=0, CntD=0;
+    void Normalize(uint8_t &X, uint8_t &PrevX);
+    RiseFall_t DetectEdge(uint8_t X, uint8_t PrevX);
+    void ResetCounters() { CntU=0; CntD=0; }
 public:
     uint32_t Count;
-    InputData_t Filtered;
-    RiseFall_t DetectEdge(uint8_t Current, uint8_t Prev);
-    void Append(InputData_t New);
+    bool WasGoodRecognition=false;
+    Gesture_t LastGesture = gstNone;
+    void Process(uint8_t U, uint8_t D);
     void Reset();
+    void SelectMostProbableGesture();
 };
 #endif
 
@@ -217,7 +219,7 @@ private:
 public:
     uint8_t Init();
     uint8_t EnableGestureSns();
-    Gesture_t LastGesture = gstNone;
+    Gesture_t GetGesture() { return Gest.LastGesture; }
     // Inner use
     void ITask();
 };

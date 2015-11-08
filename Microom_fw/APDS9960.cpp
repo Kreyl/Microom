@@ -6,6 +6,7 @@
  */
 
 #include "apds9960.h"
+#include "main.h"
 
 #if 1 // ==== Init values ====
 static const RegValue_t InitValues[] = {
@@ -41,39 +42,64 @@ APDS9960_t Apds;
 #if 1 // ================================ Gest_t ===============================
 void GestData_t::Reset() {
     Count = 0;
-    Filtered.dw32 = 0;
-    for(int i=0; i<FILTER_LEN; i++) Buf[i].dw32 = 0;
-    Indx = 0;
+    PrevU = 0;
+    PrevD = 0;
+    CntU=0;
+    CntD=0;
+    WasGoodRecognition = false;
 }
 
-void GestData_t::Append(InputData_t New) {
-    Buf[Indx++].dw32 = New.dw32;
-    if(Indx >= FILTER_LEN) Indx = 0;
-    // Calc average
-    uint32_t u=0, d=0, r=0, l=0;
-    for(int i=0; i<FILTER_LEN; i++) {
-        u += Buf[i].U;
-        d += Buf[i].D;
-        r += Buf[i].R;
-        l += Buf[i].L;
+void GestData_t::Process(uint8_t U, uint8_t D) {
+    Count++;    // Increase counter of processed data
+//    Uart.Printf("%u\t%u\r", U, D);
+//      Uart.Printf("%u %u %u %u\r", InputData[i].U, InputData[i].D, InputData[i].L, InputData[i].R);
+    // Normalize
+//    Uart.Printf("%u %u    ", U, D);
+    Normalize(U, PrevU);
+    Normalize(D, PrevD);
+//    Uart.Printf("%u %u\r", U, D);
+    // Detect edge
+    RiseFall_t EdgeU = DetectEdge(U, PrevU);
+    RiseFall_t EdgeD = DetectEdge(D, PrevD);
+    // Detect gesture
+    if((EdgeD == rfRising and U == 0) or (EdgeD == rfFalling and U == 1)) CntD++;
+    else if((EdgeU == rfRising and D == 0) or (EdgeU == rfFalling and D == 1)) CntU++;
+    // Save current values as previous
+    PrevU = U;
+    PrevD = D;
+    // Send event if gesture recognized
+    if(CntD >= 2) {
+        WasGoodRecognition = true;
+        LastGesture = gstDown;
+        ResetCounters();
+        App.SignalEvt(EVTMSK_GESTURE);
     }
-    u /= FILTER_LEN;
-    d /= FILTER_LEN;
-    r /= FILTER_LEN;
-    l /= FILTER_LEN;
-    Filtered.U = u;
-    Filtered.D = d;
-    Filtered.R = r;
-    Filtered.L = l;
+    else if(CntU >= 2) {
+        WasGoodRecognition = true;
+        LastGesture = gstUp;
+        ResetCounters();
+        App.SignalEvt(EVTMSK_GESTURE);
+    }
 }
 
-RiseFall_t GestData_t::DetectEdge(uint8_t Current, uint8_t Prev) {
-    // Ignore intermediate values
-//    if(Current > LOW_THRESHOLD and Current < HIGH_THRESHOLD)
-        return rfNone;
-
+RiseFall_t GestData_t::DetectEdge(uint8_t X, uint8_t PrevX) {
+    if(X > PrevX) return rfRising;
+    else if(X < PrevX) return rfFalling;
+    else return rfNone;
 }
 
+void GestData_t::Normalize(uint8_t &X, uint8_t &PrevX) {
+    if(PrevX == 0) X = (X > HIGH_THRESHOLD)? 1 : 0;
+    else X = (X < LOW_THRESHOLD)? 0 : 1;
+}
+
+void GestData_t::SelectMostProbableGesture() {
+    // Up/Down
+//    Uart.Printf("Prob: CntU=%u; CntD=%u\r", CntU, CntD);
+    if(CntU > CntD) LastGesture = gstUp;
+    else if(CntU < CntD) LastGesture = gstDown;
+    else LastGesture = gstNone;
+}
 #endif
 
 #if 1 // =========================== Task ======================================
@@ -86,51 +112,26 @@ static THD_FUNCTION(APDSThread, arg) {
 __attribute__((__noreturn__))
 void APDS9960_t::ITask() {
     uint8_t b=0, r, FifoLvl=0;
-    systime_t LastDataTime = 0;
     while(true) {
         chThdSleepMilliseconds(27);
         // Check if there is data
         if((r = ReadReg(APDS_REG_GSTATUS, &b)) != OK) continue;
-        if(!(b & APDS_BIT_GVALID)) {    // No Data
-            // Reset data if too old
-            if(Gest.Count != 0) {
-                chSysLock();
-                systime_t Now = chVTGetSystemTimeX();
-                if(chVTTimeElapsedSinceX(LastDataTime) > TOO_OLD_INTERVAL_MS) {
-                    Gest.Reset();
-                    LastDataTime = Now;
-                }
-                chSysUnlock();
+        if(b & APDS_BIT_GVALID) { // Data available
+            // Get FIFO level
+            if((r = ReadReg(APDS_REG_GFLVL, &FifoLvl)) != OK) continue;
+    //        Uart.Printf("FifoLvl=%u\r", FifoLvl);
+            if(FifoLvl > 0) {
+                if((r = ReadFifo(FifoLvl)) != OK) continue;
+                for(uint8_t i=0; i<FifoLvl; i++) Gest.Process(InputData[i].U, InputData[i].D);
             }
-            continue;
         }
-        // Get FIFO level
-        if((r = ReadReg(APDS_REG_GFLVL, &FifoLvl)) != OK) continue;
-//        Uart.Printf("FifoLvl=%u\r", FifoLvl);
-        if(FifoLvl > 0) {
-            if((r = ReadFifo(FifoLvl)) != OK) continue;
-//            systime_t Now = chVTGetSystemTime();
-            // Search edges
-//            RiseFall_t Edge;
-            for(uint8_t i=0; i<FifoLvl; i++) {
-//                Gest.Append(InputData[i]);
-//                Uart.Printf("%u %u %u %u\r", InputData[i].U, InputData[i].D, InputData[i].L, InputData[i].R);
-                Uart.Printf("%u\t%u\r", InputData[i].U, InputData[i].D);
-//                Uart.Printf("%u\t%u\r", Gest.Filtered.U, Gest.Filtered.D);
-//                Uart.Printf("%u %u %u %u\r", Gest.Filtered.U, Gest.Filtered.D, Gest.Filtered.L, Gest.Filtered.R);
-
-                //                Edge = Gest.DetectEdge(InputData[i].D, Gest.Prev.D);
-//                if(Edge == rfRising) Uart.Printf("%u D In\r", Gest.ID);
-//                else if(Edge == rfFalling) Uart.Printf("%u D Out\r", Gest.ID);
-//                Gest.Prev.D = InputData[i].D;
-//
-//                Edge = Gest.DetectEdge(InputData[i].U, Gest.Prev.U);
-//                if(Edge == rfRising) Uart.Printf("%u U In\r", Gest.ID);
-//                else if(Edge == rfFalling) Uart.Printf("%u U Out\r", Gest.ID);
-//                Gest.Prev.U = InputData[i].U;
-//                if(
+        else {    // No Data
+            // If data stream ended, and there is no durable solution, select most probable one
+            if(Gest.Count != 0 and !Gest.WasGoodRecognition) {   //
+                Gest.SelectMostProbableGesture();
+                if(Gest.LastGesture != gstNone) App.SignalEvt(EVTMSK_GESTURE);
             }
-
+            Gest.Reset();
         }
     } // while true
 }

@@ -75,7 +75,7 @@ void App_t::ITask() {
 
         // ==== Sensor ====
         if(EvtMsk & EVTMSK_GESTURE) {
-            ProcessValues(Apds.LastGesture);
+            ProcessValues(Apds.GetGesture());
 //            Uart.Printf("\rp");
         }
     } // while true
@@ -83,7 +83,13 @@ void App_t::ITask() {
 
 #if 1 // ======================= Signal processing =============================
 void App_t::ProcessValues(Gesture_t Gesture) {
- 	Uart.Printf("\rGst=%u", Gesture);
+    switch(Gesture) {
+        case gstUp:    Uart.Printf("Gst Up\r"); break;
+        case gstDown:  Uart.Printf("Gst Down\r"); break;
+        case gstLeft:  Uart.Printf("Gst Left\r"); break;
+        case gstRight: Uart.Printf("Gst Right\r"); break;
+        case gstNone:  Uart.Printf("Gst None\r"); break;
+    }
 //			UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
 }
 #endif
