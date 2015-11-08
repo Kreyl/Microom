@@ -12,7 +12,6 @@
 #include "filter.h"
 
 App_t App;
-APDS9960_t Apds;
 
 int main(void) {
     // ==== Setup clock frequency ====
@@ -33,16 +32,16 @@ int main(void) {
 
     // ==== Init hardware ====
     Uart.Init(115200, UART_GPIO, UART_TX_PIN, UART_GPIO, UART_RX_PIN);
-    Uart.Printf("\r%S %S", APP_NAME, APP_VERSION);
+    Uart.Printf("\r%S %S\r", APP_NAME, APP_VERSION);
     Clk.PrintFreqs();
-    if(ClkResult != 0) Uart.Printf("\rXTAL failure");
+    if(ClkResult != 0) Uart.Printf("XTAL failure\r");
 
     App.InitThread();
   	Led[0].Init();
   	Led[1].Init();
 
   	Apds.Init();
-  	if(Apds.EnableGestureSns() != OK) Uart.Printf("\rGesture Sns Failure");
+  	if(Apds.EnableGestureSns() != OK) Uart.Printf("Gesture Sns Failure\r");
 
     // Debug: init CS2 as output
 //    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
@@ -57,17 +56,15 @@ int main(void) {
 
 __attribute__ ((__noreturn__))
 void App_t::ITask() {
-    TmrSampling.InitAndStart(PThread, MS2ST(SAMPLING_INTERVAL_MS), EVTMSK_SAMPLING, tvtPeriodic);
-
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
 #if 1 // ==== USB ====
         if(EvtMsk & EVTMSK_USB_READY) {
-            Uart.Printf("\rUsbReady");
+            Uart.Printf("UsbReady\r");
             Led[0].SetHi();
         }
         if(EvtMsk & EVTMSK_USB_SUSPEND) {
-            Uart.Printf("\rUsbSuspend");
+            Uart.Printf("UsbSuspend\r");
             Led[0].SetLo();
         }
 #endif
@@ -77,10 +74,8 @@ void App_t::ITask() {
         }
 
         // ==== Sensor ====
-        if(EvtMsk & EVTMSK_SAMPLING) {
-            if(Apds.IsGestureAvailable()) {
-                ProcessValues(Apds.ReadGesture());
-            }
+        if(EvtMsk & EVTMSK_GESTURE) {
+            ProcessValues(Apds.LastGesture);
 //            Uart.Printf("\rp");
         }
     } // while true

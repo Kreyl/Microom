@@ -155,10 +155,32 @@ struct RegValue_t {
 } __attribute__((packed));
 #define REG_VALUE_SZ    2
 
-struct InputData_t {
-    uint8_t U, D, L, R;
+union InputData_t {
+    uint32_t dw32;
+    struct {
+        uint8_t U, D, L, R;
+    } __attribute__((packed));
 } __attribute__((packed));
 #define IN_DATA_SZ      4
+
+#if 1 // ==== Gesture recognition ====
+#define TOO_OLD_INTERVAL_MS     4005
+#define FILTER_LEN              9
+#define LOW_THRESHOLD           11
+#define HIGH_THRESHOLD          36
+class GestData_t {
+private:
+    uint32_t Indx;
+    InputData_t Buf[FILTER_LEN];
+
+public:
+    uint32_t Count;
+    InputData_t Filtered;
+    RiseFall_t DetectEdge(uint8_t Current, uint8_t Prev);
+    void Append(InputData_t New);
+    void Reset();
+};
+#endif
 
 class APDS9960_t {
 private:
@@ -187,7 +209,7 @@ private:
     uint8_t DisableGestureIrq();
     uint8_t SetLedBoost(LedBoost_t Boost);
     // Data manipulation
-    void ResetGestureParameters();
+    GestData_t Gest;
     uint8_t ReadFifo(uint8_t Count) {
         uint8_t Addr = APDS_REG_GFIFO_U;
         return ii2c.WriteRead(APDS_ADDR, &Addr, 1, (uint8_t*)InputData, (Count * IN_DATA_SZ));
@@ -195,8 +217,11 @@ private:
 public:
     uint8_t Init();
     uint8_t EnableGestureSns();
-    bool IsGestureAvailable();
-    Gesture_t ReadGesture();
+    Gesture_t LastGesture = gstNone;
+    // Inner use
+    void ITask();
 };
+
+extern APDS9960_t Apds;
 
 #endif /* APDS9960_H_ */

@@ -27,7 +27,6 @@ private:
     thread_t *PThread;
     void ProcessValues(Gesture_t Gesture);
 public:
-    TmrVirtual_t TmrSampling;
     // Eternal methods
     void InitThread() { PThread = chThdGetSelfX(); }
     void SignalEvt(eventmask_t Evt) {

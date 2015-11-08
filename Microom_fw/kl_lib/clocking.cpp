@@ -572,7 +572,7 @@ void Clk_t::MCO2Disable() {
 
 void Clk_t::PrintFreqs() {
     Uart.Printf(
-            "\rAHBFreq=%uMHz; APB1Freq=%uMHz; APB2Freq=%uMHz; TimMulti1=%u, TimMulti2=%u",
+            "AHBFreq=%uMHz; APB1Freq=%uMHz; APB2Freq=%uMHz; TimMulti1=%u, TimMulti2=%u\r",
             Clk.AHBFreqHz/1000000, Clk.APB1FreqHz/1000000, Clk.APB2FreqHz/1000000,
             TimerAPB1ClkMulti, TimerAPB2ClkMulti);
 }

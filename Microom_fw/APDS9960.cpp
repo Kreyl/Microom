@@ -36,6 +36,106 @@ static const RegValue_t InitValues[] = {
 #define INIT_VALUES_CNT     countof(InitValues)
 #endif
 
+APDS9960_t Apds;
+
+#if 1 // ================================ Gest_t ===============================
+void GestData_t::Reset() {
+    Count = 0;
+    Filtered.dw32 = 0;
+    for(int i=0; i<FILTER_LEN; i++) Buf[i].dw32 = 0;
+    Indx = 0;
+}
+
+void GestData_t::Append(InputData_t New) {
+    Buf[Indx++].dw32 = New.dw32;
+    if(Indx >= FILTER_LEN) Indx = 0;
+    // Calc average
+    uint32_t u=0, d=0, r=0, l=0;
+    for(int i=0; i<FILTER_LEN; i++) {
+        u += Buf[i].U;
+        d += Buf[i].D;
+        r += Buf[i].R;
+        l += Buf[i].L;
+    }
+    u /= FILTER_LEN;
+    d /= FILTER_LEN;
+    r /= FILTER_LEN;
+    l /= FILTER_LEN;
+    Filtered.U = u;
+    Filtered.D = d;
+    Filtered.R = r;
+    Filtered.L = l;
+}
+
+RiseFall_t GestData_t::DetectEdge(uint8_t Current, uint8_t Prev) {
+    // Ignore intermediate values
+//    if(Current > LOW_THRESHOLD and Current < HIGH_THRESHOLD)
+        return rfNone;
+
+}
+
+#endif
+
+#if 1 // =========================== Task ======================================
+static THD_WORKING_AREA(waAPDS, 256);
+static THD_FUNCTION(APDSThread, arg) {
+    chRegSetThreadName("Apds");
+    Apds.ITask();
+}
+
+__attribute__((__noreturn__))
+void APDS9960_t::ITask() {
+    uint8_t b=0, r, FifoLvl=0;
+    systime_t LastDataTime = 0;
+    while(true) {
+        chThdSleepMilliseconds(27);
+        // Check if there is data
+        if((r = ReadReg(APDS_REG_GSTATUS, &b)) != OK) continue;
+        if(!(b & APDS_BIT_GVALID)) {    // No Data
+            // Reset data if too old
+            if(Gest.Count != 0) {
+                chSysLock();
+                systime_t Now = chVTGetSystemTimeX();
+                if(chVTTimeElapsedSinceX(LastDataTime) > TOO_OLD_INTERVAL_MS) {
+                    Gest.Reset();
+                    LastDataTime = Now;
+                }
+                chSysUnlock();
+            }
+            continue;
+        }
+        // Get FIFO level
+        if((r = ReadReg(APDS_REG_GFLVL, &FifoLvl)) != OK) continue;
+//        Uart.Printf("FifoLvl=%u\r", FifoLvl);
+        if(FifoLvl > 0) {
+            if((r = ReadFifo(FifoLvl)) != OK) continue;
+//            systime_t Now = chVTGetSystemTime();
+            // Search edges
+//            RiseFall_t Edge;
+            for(uint8_t i=0; i<FifoLvl; i++) {
+//                Gest.Append(InputData[i]);
+//                Uart.Printf("%u %u %u %u\r", InputData[i].U, InputData[i].D, InputData[i].L, InputData[i].R);
+                Uart.Printf("%u\t%u\r", InputData[i].U, InputData[i].D);
+//                Uart.Printf("%u\t%u\r", Gest.Filtered.U, Gest.Filtered.D);
+//                Uart.Printf("%u %u %u %u\r", Gest.Filtered.U, Gest.Filtered.D, Gest.Filtered.L, Gest.Filtered.R);
+
+                //                Edge = Gest.DetectEdge(InputData[i].D, Gest.Prev.D);
+//                if(Edge == rfRising) Uart.Printf("%u D In\r", Gest.ID);
+//                else if(Edge == rfFalling) Uart.Printf("%u D Out\r", Gest.ID);
+//                Gest.Prev.D = InputData[i].D;
+//
+//                Edge = Gest.DetectEdge(InputData[i].U, Gest.Prev.U);
+//                if(Edge == rfRising) Uart.Printf("%u U In\r", Gest.ID);
+//                else if(Edge == rfFalling) Uart.Printf("%u U Out\r", Gest.ID);
+//                Gest.Prev.U = InputData[i].U;
+//                if(
+            }
+
+        }
+    } // while true
+}
+#endif
+
 uint8_t APDS9960_t::Init() {
     ii2c.Init();
 //    ii2c.ScanBus();
@@ -72,51 +172,21 @@ uint8_t APDS9960_t::Init() {
     if(SetGestureLEDDrive(DEFAULT_GLDRIVE) != OK) return FAILURE;
     if(SetGestureWaitTime(DEFAULT_GWTIME) != OK) return FAILURE;
     if(DisableGestureIrq() != OK) return FAILURE;
+
+    // Thread
+    chThdCreateStatic(waAPDS, sizeof(waAPDS), NORMALPRIO, APDSThread, NULL);
     return OK;
 }
 
 uint8_t APDS9960_t::EnableGestureSns() {
     uint8_t r;
-    ResetGestureParameters();
+    Gest.Reset();
     if((r = WriteReg({APDS_REG_WTIME, 0xFF})) != OK) return r;
     if((r = WriteReg({APDS_REG_PPULSE, DEFAULT_GESTURE_PPULSE})) != OK) return r;
     if((r = SetLedBoost(lbst300)) != OK) return r;
     if((r = EnableGestureMode()) != OK) return r;
     if((r = EnablePower()) != OK) return r;
     return EnableMode(MODE_WAIT | MODE_PROXIMITY | MODE_GESTURE);
-}
-
-bool APDS9960_t::IsGestureAvailable() {
-    uint8_t b=0, r;
-    if((r = ReadReg(APDS_REG_GSTATUS, &b)) != OK) return false;
-    return (b & APDS_BIT_GVALID);
-}
-
-Gesture_t APDS9960_t::ReadGesture() {
-    uint8_t b=0, r, FifoLvl=0;
-    while(true) {
-        // Check if there is data
-        if((r = ReadReg(APDS_REG_GSTATUS, &b)) != OK) break;
-        if(b & APDS_BIT_GVALID) {
-            // Get FIFO level
-            if((r = ReadReg(APDS_REG_GFLVL, &FifoLvl)) != OK) break;
-            Uart.Printf("\rFifoLvl=%u", FifoLvl);
-            if(FifoLvl > 0) {
-                if((r = ReadFifo(FifoLvl)) != OK) break;
-                for(uint8_t i=0; i<FifoLvl; i++) {
-                    Uart.Printf("\r%u %u %u %u", InputData[i].U, InputData[i].D, InputData[i].L, InputData[i].R);
-                }
-            }
-
-
-            break;
-        }
-    } // while true
-    return gstNone;
-}
-
-void APDS9960_t::ResetGestureParameters() {
-
 }
 
 #if 1 // ====================== Auxilary subroutines ===========================
