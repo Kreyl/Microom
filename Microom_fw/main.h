@@ -19,39 +19,23 @@
 #define APP_NAME            "Gesture Sensor"
 #define APP_VERSION         __DATE__ " " __TIME__
 
-#define SNS_VALUE_THRESHOLD		1530
+#define SNS_LOW_THRESHOLD		1530
+#define SNS_HIGH_THRESHOLD      1710
 #define SAMPLING_INTERVAL_MS	11
 
-// Sns state
-struct SnsState_t {
-	int8_t St0, St1;
-	bool operator == (const SnsState_t &ASt) { return ((St0 == ASt.St0) and (St1 == ASt.St1)); }
-	bool operator != (const SnsState_t &ASt) { return ((St0 != ASt.St0) or  (St1 != ASt.St1)); }
-	SnsState_t& operator = (const SnsState_t &ASt) {
-		St0 = ASt.St0;
-		St1 = ASt.St1;
-		return *this;
-	}
-	void Reset() { St0 = -1; St1 = -1; }
-};
-
-// Gesture
-const SnsState_t Gesture[] = {
-		{1, 0},
-		{1, 1},
-		{0, 1},
-//		{1, 1},
-//		{1, 0},
-};
-#define GESTURE_LEN	(countof(Gesture))
-
-#define BUF_CNT		GESTURE_LEN
+enum HiLo_t { hlLow=0, hlHigh=1 };
 
 class App_t {
 private:
+    HiLo_t Prev0 = hlLow, Prev1 = hlLow;
+    HiLo_t Normalize(uint32_t X, HiLo_t PrevX);
+    RiseFall_t DetectEdge(HiLo_t X, HiLo_t PrevX);
+    uint32_t CntU=0, CntD=0;
+    void ResetCounters() { CntU=0; CntD=0; }
+
+
     thread_t *PThread;
     void ProcessValues(uint32_t Sns0, uint32_t Sns1);
-    SnsState_t IBuf[BUF_CNT];
 public:
     TmrVirtual_t TmrSampling;
     // Eternal methods

@@ -63,7 +63,7 @@
 
 enum BitOrder_t {boMSB, boLSB};
 enum LowHigh_t  {Low, High};
-enum RiseFall_t {Rising, Falling};
+enum RiseFall_t {rfRising, rfFalling, rfNone};
 enum Inverted_t {invNotInverted, invInverted};
 enum PinOutMode_t {omPushPull = 0, omOpenDrain = 1};
 enum BitNumber_t {bitn8, bitn16, bitn32};
