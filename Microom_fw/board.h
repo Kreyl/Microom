@@ -83,7 +83,7 @@
 
 // ADC channels: LED3, LED6
 #define SNS_CHNL0 	        10
-#define SNS_CHNL1 	        11
+#define SNS_CHNL1 	        14
 
 #define ADC_VREFINT_CHNL    17  // All 4xx devices. Do not change.
 const uint8_t AdcChannels[] = { SNS_CHNL0, SNS_CHNL1 };

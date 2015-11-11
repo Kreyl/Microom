@@ -43,7 +43,7 @@ int main(void) {
 
     Adc.Init();
     PinSetupAnalog(GPIOC, 0);
-    PinSetupAnalog(GPIOC, 1);
+    PinSetupAnalog(GPIOC, 4);
 
     // Debug: init CS2 as output
 //    PinSetupOut(GPIOC, 13, omPushPull, pudNone);
@@ -116,11 +116,12 @@ void App_t::ProcessValues(uint32_t Sns0, uint32_t Sns1) {
     if(CntD >= 2) {
         ResetCounters();
         Uart.Printf("Down\r");
+        UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
     }
     else if(CntU >= 2) {
         ResetCounters();
         Uart.Printf("Up\r");
-        UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
+//        UsbKBrd.PressAndRelease(HID_KEYBOARD_SC_A);
     }
 }
 
