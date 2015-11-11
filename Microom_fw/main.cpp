@@ -58,8 +58,8 @@ int main(void) {
 
 __attribute__ ((__noreturn__))
 void App_t::ITask() {
-    TmrSampling.Init(PThread, MS2ST(SAMPLING_INTERVAL_MS), EVTMSK_SAMPLING, tvtPeriodic);
-
+    TmrSampling.InitAndStart(PThread, MS2ST(SAMPLING_INTERVAL_MS), EVTMSK_SAMPLING, tvtPeriodic);
+    TmrReset.Init(PThread, MS2ST(RESET_INTERVAL), EVTMSK_RESET, tvtOneShot);
     while(true) {
         uint32_t EvtMsk = chEvtWaitAny(ALL_EVENTS);
 #if 1 // ==== USB ====
@@ -86,6 +86,10 @@ void App_t::ITask() {
          	uint32_t Sns1 = Adc.GetResult(SNS_CHNL1);
          	ProcessValues(Sns0, Sns1);
         }
+
+        if(EvtMsk & EVTMSK_RESET) {
+            ResetCounters();
+        }
     } // while true
 }
 
@@ -106,6 +110,8 @@ void App_t::ProcessValues(uint32_t Sns0, uint32_t Sns1) {
     // Save current values as previous
     Prev0 = Norm0;
     Prev1 = Norm1;
+    // Start timer
+    if(CntD == 1 or CntU == 1) TmrReset.StartIfNotRunning();
     // Send event if gesture recognized
     if(CntD >= 2) {
         ResetCounters();

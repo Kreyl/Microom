@@ -22,6 +22,7 @@
 #define SNS_LOW_THRESHOLD		1530
 #define SNS_HIGH_THRESHOLD      1710
 #define SAMPLING_INTERVAL_MS	11
+#define RESET_INTERVAL          2700
 
 enum HiLo_t { hlLow=0, hlHigh=1 };
 
@@ -31,9 +32,12 @@ private:
     HiLo_t Normalize(uint32_t X, HiLo_t PrevX);
     RiseFall_t DetectEdge(HiLo_t X, HiLo_t PrevX);
     uint32_t CntU=0, CntD=0;
-    void ResetCounters() { CntU=0; CntD=0; }
-
-
+    void ResetCounters() {
+        CntU=0;
+        CntD=0;
+        TmrReset.Stop();
+    }
+    TmrVirtual_t TmrReset;
     thread_t *PThread;
     void ProcessValues(uint32_t Sns0, uint32_t Sns1);
 public:

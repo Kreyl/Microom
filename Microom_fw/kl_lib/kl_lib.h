@@ -167,6 +167,11 @@ public:
         StartI();
         chSysUnlock();
     }
+    void StartIfNotRunning() {
+        chSysLock();
+        if(!chVTIsArmedI(&Tmr)) StartI();
+        chSysUnlock();
+    }
     void Stop() { chVTReset(&Tmr); }
     void Restart() {
         chVTReset(&Tmr);
