@@ -9,7 +9,7 @@
 #define BOARD_H_
 
 // General
-#define CRYSTAL_FREQ_HZ     10000000    // Freq of external crystal
+#define CRYSTAL_FREQ_HZ     12000000    // Freq of external crystal
 
 #if 1 // ========================== GPIO =======================================
 // UART
@@ -49,6 +49,27 @@
 #define LEDAUX_GPIO     GPIOB
 #endif
 
+#if 1 // =========================== HW Timers =================================
+// System timer
+#define CHSYS_TIM       TIM5
+// LEDs
+// LEDs 1,3,4,6 do not have PWM
+#define LED2_TIM        TIM2
+#define LED2_TCHNL      4
+#define LED5_TIM        TIM4
+#define LED5_TCHNL      3
+#define LED7_TIM        TIM4
+#define LED7_TCHNL      4
+#define LED8_TIM        TIM1
+#define LED8_TCHNL      3
+
+// PCM
+#define PCM_CLK_TIM     TIM3
+#define PCM_CLK_TCHNL   1
+
+
+#endif
+
 #if 1 // =========================== SPI =======================================
 #define PCM_CTRL_SPI    SPI1
 #define PCM_DATA_SPI    SPI2
@@ -63,6 +84,8 @@
 #endif
 
 #if 1 // =========================== DMA =======================================
+#define STM32_DMA_REQUIRED  TRUE
+
 // Uart
 #define UART_DMA_TX     STM32_DMA2_STREAM7
 #define UART_DMA_RX     STM32_DMA2_STREAM5

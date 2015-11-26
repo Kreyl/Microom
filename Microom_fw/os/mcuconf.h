@@ -34,8 +34,7 @@
 #define STM32F4xx_MCUCONF
 
 // @KL
-#define STM32_DMA_REQUIRED                  TRUE
-
+#include "board.h"
 /*
  * HAL driver system settings.
  */
@@ -105,7 +104,7 @@
  * ST driver system settings.
  */
 #define STM32_ST_IRQ_PRIORITY               8
-#define STM32_ST_USE_TIMER                  2
+#define STM32_ST_USE_TIMER                  CHSYS_TIM
 
 /*
  * USB driver system settings.

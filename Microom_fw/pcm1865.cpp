@@ -11,6 +11,7 @@
 #include "clocking.h"
 #include "usb_audio.h"
 #include "leds.h"
+#include "board.h"
 
 // ST I2S formats
 #define I2SSTD_I2S      0x00
@@ -34,7 +35,7 @@
 #define REG_ADC2L       0x08
 #define REG_ADC2R       0x09
 
-PinOutputPWM_t<PCM_CLKTMR_TOP, invNotInverted, omPushPull> TmrClk {GPIOC, 6, TIM3, 1};
+PinOutputPWM_t<PCM_CLKTMR_TOP, invNotInverted, omPushPull> TmrClk {GPIOC, 6, PCM_CLK_TIM, PCM_CLK_TCHNL};
 
 // Wrapper for DMA TX IRQ
 extern "C" {
