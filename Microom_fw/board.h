@@ -51,8 +51,9 @@
 
 #if 1 // =========================== HW Timers =================================
 // System timer
-#define CHSYS_TIM       TIM5
+#define CHSYS_TIM       5
 // LEDs
+#define LED_TOP_VALUE   255
 // LEDs 1,3,4,6 do not have PWM
 #define LED2_TIM        TIM2
 #define LED2_TCHNL      4

@@ -122,8 +122,8 @@ void PCM1865_t::Init() {
 #endif // Clocks
     // Common settings
 //    WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
-    WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
-//    WriteReg(0x05, 0b11000111);
+    //WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
+    WriteReg(0x05, 0b11000111);
     // ADC Channel selection
     SelectMicGrp(mg1);
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected

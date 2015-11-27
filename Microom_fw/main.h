@@ -46,8 +46,8 @@ class App_t {
 private:
     thread_t *PThread;
     int16_t IChnl[CHNL_CNT];
-    int MaxLedIndx = 1;
     LvlMtr_t<LVLMTR_CNT> LvlMtr[CHNL_CNT];
+    uint8_t Mic2LedLevel(int32_t MicLevel);
 #if AGC_ENABLED
     uint32_t AgcCounter = 0;
     int8_t Gain = 0;

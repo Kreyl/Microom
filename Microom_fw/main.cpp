@@ -15,6 +15,14 @@
 
 App_t App;
 PCM1865_t Pcm;
+PinOutputPWM_t<LED_TOP_VALUE, invNotInverted, omPushPull> Led[4] = {
+        {LED2_GPIO, LED2_PIN, LED2_TIM, LED2_TCHNL},
+        {LED5_GPIO, LED5_PIN, LED5_TIM, LED5_TCHNL},
+        {LED7_GPIO, LED7_PIN, LED7_TIM, LED7_TCHNL},
+        {LED8_GPIO, LED8_PIN, LED8_TIM, LED8_TCHNL},
+};
+
+PinOutput_t LedAux = {LEDAUX_GPIO, LEDAUX_PIN, omPushPull};
 
 int main(void) {
     // ==== Setup clock frequency ====
@@ -41,14 +49,22 @@ int main(void) {
 
     App.InitThread();
     // Leds
-    for(uint8_t i=0; i<9; i++) Led[i].Init();
+    LedAux.Init();
+    for(uint8_t i=0; i<4; i++) {
+        Led[i].Init();
+//        for(uint8_t j=0; j<250; j++) {
+//            Led[i].Set(j);
+//            chThdSleepMilliseconds(4);
+//        }
+//        Led[i].Set(0);
+    }
 
     // Debug: init CS2 as output
     PinSetupOut(GPIOC, 13, omPushPull, pudNone);
 
     // ==== USB ====
-    UsbAu.Init();
-    UsbAu.Connect();
+//    UsbAu.Init();
+//    UsbAu.Connect();
 
     Pcm.Init();
 
@@ -66,11 +82,11 @@ void App_t::ITask() {
 #if 1 // ==== USB ====
         if(EvtMsk & EVTMSK_USB_READY) {
             Uart.Printf("\rUsbReady");
-            Led[0].SetHi();
+            LedAux.SetHi();
         }
         if(EvtMsk & EVTMSK_USB_SUSPEND) {
             Uart.Printf("\rUsbSuspend");
-            Led[0].SetLo();
+            LedAux.SetLo();
         }
 
         if(EvtMsk & EVTMSK_START_LISTEN) {
@@ -122,36 +138,18 @@ void App_t::OnCmd(Shell_t *PShell) {
     else PShell->Ack(CMD_UNKNOWN);
 }
 
-
-#if 0 // ==== Common ====
-    else if(PCmd->NameIs("#SetSmplFreq")) {
-        if(PCmd->GetNextToken() != OK) { UsbUart.Ack(CMD_ERROR); return; }
-        if(PCmd->TryConvertTokenToNumber(&dw32) != OK) { UsbUart.Ack(CMD_ERROR); return; }
-        SamplingTmr.SetUpdateFrequency(dw32);
-        UsbUart.Ack(OK);
-    }
-
-    else if(PCmd->NameIs("#SetResolution")) {
-        if(PCmd->GetNextToken() != OK) { UsbUart.Ack(CMD_ERROR); return; }
-        if((PCmd->TryConvertTokenToNumber(&dw32) != OK) or (dw32 < 1 or dw32 > 16)) { UsbUart.Ack(CMD_ERROR); return; }
-        ResolutionMask = 0xFFFF << (16 - dw32);
-        UsbUart.Ack(OK);
-    }
-
-    // Output analog filter
-    else if(PCmd->NameIs("#OutFilterOn"))  { OutputFilterOn();  UsbUart.Ack(OK); }
-    else if(PCmd->NameIs("#OutFilterOff")) { OutputFilterOff(); UsbUart.Ack(OK); }
-
-    // Stat/Stop
-    else if(PCmd->NameIs("#Start")) { PCurrentFilter->Start(); UsbUart.Ack(OK); }
-    else if(PCmd->NameIs("#Stop"))  { PCurrentFilter->Stop();  UsbUart.Ack(OK); }
-#endif
-
 #endif
 
 #if 1 // ======================= Sample processing =============================
 // Mic indx to Led indx
 const int Mic2Led[4] = {1, 4, 7, 6};
+
+uint8_t App_t::Mic2LedLevel(int32_t MicLevel) {
+    if(MicLevel <= 0) return 0;
+    int32_t r = MicLevel / 8192;
+    if(r > LED_TOP_VALUE) r = LED_TOP_VALUE;
+    return (uint8_t)r;
+}
 
 void App_t::ProcessValues(int16_t *Values) {
     // Copy values to local array (and do not afraid that Values[] will be overwritten by DMA)
@@ -159,10 +157,12 @@ void App_t::ProcessValues(int16_t *Values) {
     IChnl[1] = Values[1];   // Mic4
     IChnl[2] = Values[2];   // Mic7
     IChnl[3] = Values[3];   // Mic6
-    // Calculate level
+    // Calculate and show level
     int32_t Max = 0, Indx = 0;
     for(int i=0; i<CHNL_CNT; i++) {
         int32_t Lvl = LvlMtr[i].AddXAndCalculate(IChnl[i]);
+        uint8_t Brt = Mic2LedLevel(Lvl);
+        Led[i].Set(Brt);
         if(Max < Lvl) {
             Max = Lvl;
             Indx = i;
@@ -186,14 +186,10 @@ void App_t::ProcessValues(int16_t *Values) {
     }
 #endif
 
-    // Show loudest
-    Led[MaxLedIndx].SetLo();    // Switch off previous MaxLed
-    MaxLedIndx = Mic2Led[Indx];
-    Led[MaxLedIndx].SetHi();    // Switch on new MaxLed
     // Copy selected data to buffer-to-send and send to USB when filled up
-    if(Buf2Send.Append(IChnl[Indx]) == addrSwitch) {
-        uint8_t *p = (uint8_t*)Buf2Send.GetBufToRead();
-        UsbAu.SendBufI(p, USB_PKT_SZ);
-    }
+//    if(Buf2Send.Append(IChnl[Indx]) == addrSwitch) {
+//        uint8_t *p = (uint8_t*)Buf2Send.GetBufToRead();
+//        UsbAu.SendBufI(p, USB_PKT_SZ);
+//    }
 }
 #endif

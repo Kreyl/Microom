@@ -11,7 +11,9 @@
 #include "board.h"
 #include "kl_lib.h"
 
-extern PinOutput_t Led[9];  // LED[0] is Aux
+extern PinOutput_t LedAux;
+
+extern PinOutputPWM_t<LED_TOP_VALUE, invNotInverted, omPushPull> Led[4];
 
 
 #endif /* LEDS_H_ */
