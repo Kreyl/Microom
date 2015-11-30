@@ -1,4 +1,5 @@
 EESchema Schematic File Version 2
+LIBS:Microom-rescue
 LIBS:pcb_details
 LIBS:power
 LIBS:Power_kl
@@ -693,7 +694,7 @@ F 3 "" H 4250 2900 60  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L USB_MINI_B XL2
+L USB_MINI_B-RESCUE-Microom XL2
 U 1 1 55D3B305
 P 1400 8500
 F 0 "XL2" H 1150 8950 60  0000 C CNN
