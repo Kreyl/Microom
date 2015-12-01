@@ -143,16 +143,16 @@ void PCM1865_t::Init() {
 // ADC Channel selection (everywhere signal is not inverted)
 void PCM1865_t::SelectMicGrp(MicGroup_t Grp) {
     if(Grp == mg1) {    // 1, 4, 6, 7 == L1, R2, R3, L4 => L1,R2,L4,R3 => 1,4,7,6
-        WriteReg(REG_ADC1L, IN_L1);
-        WriteReg(REG_ADC1R, IN_R2);
+        WriteReg(REG_ADC1L, IN_L3);
+        WriteReg(REG_ADC1R, IN_R1);
         WriteReg(REG_ADC2L, IN_L4);
-        WriteReg(REG_ADC2R, IN_R3);
+        WriteReg(REG_ADC2R, IN_R4);
     }
     else {  // 2, 3, 5, 8 == R1, L2, L3, R4 => L2,R1,L3,R4
-        WriteReg(REG_ADC1L, IN_L2);
-        WriteReg(REG_ADC1R, IN_R1);
-        WriteReg(REG_ADC2L, IN_L3);
-        WriteReg(REG_ADC2R, IN_R4);
+        WriteReg(REG_ADC1L, IN_L1);
+        WriteReg(REG_ADC1R, IN_R2);
+        WriteReg(REG_ADC2L, IN_L2);
+        WriteReg(REG_ADC2R, IN_R3);
     }
 }
 

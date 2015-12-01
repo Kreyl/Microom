@@ -16,8 +16,8 @@
 App_t App;
 PCM1865_t Pcm;
 PinOutputPWM_t<LED_TOP_VALUE, invNotInverted, omPushPull> Led[4] = {
-        {LED2_GPIO, LED2_PIN, LED2_TIM, LED2_TCHNL},
         {LED5_GPIO, LED5_PIN, LED5_TIM, LED5_TCHNL},
+        {LED2_GPIO, LED2_PIN, LED2_TIM, LED2_TCHNL},
         {LED7_GPIO, LED7_PIN, LED7_TIM, LED7_TCHNL},
         {LED8_GPIO, LED8_PIN, LED8_TIM, LED8_TCHNL},
 };
@@ -158,7 +158,8 @@ void App_t::ProcessValues(int16_t *Values) {
     IChnl[2] = Values[2];   // Mic7
     IChnl[3] = Values[3];   // Mic6
     // Calculate and show level
-    int32_t Max = 0, Indx = 0;
+    int32_t Max = 0;
+    __attribute__((unused)) int32_t Indx = 0;
     for(int i=0; i<CHNL_CNT; i++) {
         int32_t Lvl = LvlMtr[i].AddXAndCalculate(IChnl[i]);
         uint8_t Brt = Mic2LedLevel(Lvl);
