@@ -123,7 +123,7 @@ void PCM1865_t::Init() {
     // Common settings
 //    WriteReg(0x05, 0b00000110); // No Smooth, no Link, no ClippDet, def attenuation, no AGC
     //WriteReg(0x05, 0b01000110); // No Smooth, Gain Link Enabled, no ClippDet, def attenuation, no AGC
-    WriteReg(0x05, 0b11000111);
+    WriteReg(0x05, 0b10000111);
     // ADC Channel selection
     SelectMicGrp(mg1);
     WriteReg(0x0A, 0x00);   // Secondary ADC not connected
@@ -279,6 +279,9 @@ void PCM1865_t::SetGain(int8_t Gain_dB) {
     if(Gain_dB < -12 or Gain_dB > 40) return;
     Gain_dB *= 2;
     WriteReg(0x01, Gain_dB);
+    WriteReg(0x02, Gain_dB);
+    WriteReg(0x03, Gain_dB);
+    WriteReg(0x04, Gain_dB);
 }
 
 int8_t PCM1865_t::GetGain(uint8_t Ch) {

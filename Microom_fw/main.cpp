@@ -63,8 +63,8 @@ int main(void) {
     PinSetupOut(GPIOC, 13, omPushPull, pudNone);
 
     // ==== USB ====
-//    UsbAu.Init();
-//    UsbAu.Connect();
+    UsbAu.Init();
+    UsbAu.Connect();
 
     Pcm.Init();
 
@@ -135,6 +135,11 @@ void App_t::OnCmd(Shell_t *PShell) {
         PShell->Printf("\rGain4 = %d", g);
     }
 
+    else if(PCmd->NameIs("SelCh")) {
+        if(PCmd->GetNextNumber(&dw32) != OK) { PShell->Ack(CMD_ERROR); return; }
+        ChToSend = (uint8_t)dw32;
+    }
+
     else PShell->Ack(CMD_UNKNOWN);
 }
 
@@ -151,6 +156,8 @@ uint8_t App_t::Mic2LedLevel(int32_t MicLevel) {
     return (uint8_t)r;
 }
 
+
+int32_t PrevIndx=-1;
 void App_t::ProcessValues(int16_t *Values) {
     // Copy values to local array (and do not afraid that Values[] will be overwritten by DMA)
     IChnl[0] = Values[0];   // Mic1
@@ -188,9 +195,15 @@ void App_t::ProcessValues(int16_t *Values) {
 #endif
 
     // Copy selected data to buffer-to-send and send to USB when filled up
-//    if(Buf2Send.Append(IChnl[Indx]) == addrSwitch) {
-//        uint8_t *p = (uint8_t*)Buf2Send.GetBufToRead();
-//        UsbAu.SendBufI(p, USB_PKT_SZ);
-//    }
+    if(ChToSend <= 3) Indx = ChToSend;
+    if(Indx != PrevIndx) {
+        PrevIndx = Indx;
+        Uart.PrintfI("%u\r", Indx);
+    }
+
+    if(Buf2Send.Append(IChnl[Indx]) == addrSwitch) {
+        uint8_t *p = (uint8_t*)Buf2Send.GetBufToRead();
+        UsbAu.SendBufI(p, USB_PKT_SZ);
+    }
 }
 #endif
